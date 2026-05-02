@@ -178,7 +178,7 @@
       padding: 20px;
     }
     
-    .video-card { height: 240px; display: flex; flex-direction: column; position: relative; }
+    .video-card { height: 450px; display: flex; flex-direction: column; position: relative; }
     .video-container {
       flex: 1;
       background: #000;
@@ -186,7 +186,7 @@
       overflow: hidden;
       position: relative;
     }
-    #webcam { width: 100%; height: 100%; object-fit: cover; }
+    #webcam { width: 100%; height: 100%; object-fit: contain; }
     #face-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
     
     .badges {
@@ -377,6 +377,7 @@
   </style>
 </head>
 <body>
+  <audio id="tts-audio" style="display:none;"></audio>
 
   <div class="bg-blobs">
     <div class="blob blob-1"></div>
@@ -523,6 +524,8 @@
       { id: 'credit_score', label: 'Credit Score', en: "What is your approximate credit score if you know it? Otherwise say I don't know.", hi: "Agar aapko apna credit score pata hai toh batayein, warna kahen mujhe nahi pata.", kn: "Nimma credit score gottiddare heli, illavadare gottilla heli." }
     ];
 
+    const ttsAudio = new Audio();
+
     const CredAI = {
       state: {
         currentQuestionIndex: -1,
@@ -588,6 +591,10 @@
       flow: {
         start() {
           document.getElementById('start-btn').style.display = 'none';
+          
+          ttsAudio.src = 'data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA';
+          ttsAudio.play().catch(e=>{});
+
           CredAI.state.currentQuestionIndex = 0;
           this.askCurrent();
         },
@@ -764,14 +771,46 @@
           document.getElementById('bot-avatar').classList.add('speaking');
           document.getElementById('assistant-status').innerText = "Speaking...";
           
+          let targetCode = (CredAI.state.langCode || 'en').split('-')[0].toLowerCase();
+          
+          if (targetCode === 'hi') {
+            console.warn("Using Cloud Audio for Hindi via backend proxy");
+            
+            ttsAudio.src = `http://127.0.0.1:8000/api/tts?lang=hi&text=${encodeURIComponent(text)}`;
+            
+            ttsAudio.onended = () => {
+              CredAI.state.isSpeaking = false;
+              document.getElementById('bot-avatar').classList.remove('speaking');
+              if(onComplete) onComplete();
+            };
+            ttsAudio.onerror = () => {
+              console.error("Cloud TTS failed");
+              setTimeout(() => {
+                CredAI.state.isSpeaking = false;
+                document.getElementById('bot-avatar').classList.remove('speaking');
+                if(onComplete) onComplete();
+              }, 3000);
+            };
+            ttsAudio.play().catch(e => {
+              console.error("Audio Play Err:", e);
+              setTimeout(() => {
+                CredAI.state.isSpeaking = false;
+                document.getElementById('bot-avatar').classList.remove('speaking');
+                if(onComplete) onComplete();
+              }, 3000);
+            });
+            return;
+          }
+
           const utter = new SpeechSynthesisUtterance(text);
           utter.lang = CredAI.state.langCode;
           utter.rate = 0.9;
           
-          // Try to find Indian voice
           const voices = this.synth.getVoices();
-          let v = voices.find(v => v.lang === utter.lang);
-          if(!v) v = voices.find(v => v.lang.includes('en-IN') || v.lang.includes('hi'));
+          let v = voices.find(v => v.lang.toLowerCase() === utter.lang.toLowerCase());
+          if(!v) v = voices.find(v => v.lang.toLowerCase().startsWith(targetCode));
+          if(!v && targetCode === 'kn') v = voices.find(v => v.name.toLowerCase().includes('kannada') || v.name.includes('ಕನ್ನಡ'));
+          if(!v && targetCode === 'en') v = voices.find(v => v.lang.includes('IN') || v.lang.includes('en'));
           if(v) utter.voice = v;
 
           utter.onend = () => {

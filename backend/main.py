@@ -10,6 +10,9 @@ from backend.routes import risk, fraud, face, session, admin, pdf_form, voice_as
 from deepface import DeepFace
 import cv2
 import numpy as np
+import urllib.request
+import urllib.parse
+from fastapi.responses import StreamingResponse
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -75,3 +78,19 @@ async def api_status():
 frontend_dir = os.path.join(BASE_DIR, "frontend")
 if os.path.exists(frontend_dir):
     app.mount("/", StaticFiles(directory=frontend_dir, html=True), name="frontend")
+
+@app.get("/api/tts")
+def proxy_tts(text: str, lang: str):
+    url = f"https://translate.google.com/translate_tts?ie=UTF-8&tl={lang}&client=tw-ob&q={urllib.parse.quote(text)}"
+    req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
+    try:
+        response = urllib.request.urlopen(req)
+        def iterfile():
+            while True:
+                chunk = response.read(4096)
+                if not chunk: break
+                yield chunk
+        return StreamingResponse(iterfile(), media_type="audio/mpeg")
+    except Exception as e:
+        print(f"TTS Proxy Error: {e}")
+        return {"error": str(e)}
