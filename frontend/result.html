@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CredAI - Application Result</title>
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        .result-hero { text-align: center; padding: 40px; margin-bottom: 30px; }
+        .decision-icon { font-size: 4rem; margin-bottom: 16px; animation: pulse 2s infinite; }
+    </style>
+</head>
+<body>
+    <div class="gradient-bg">
+        <div class="blob blob-1"></div>
+        <div class="blob blob-3"></div>
+    </div>
+
+    <nav class="navbar scrolled" style="padding: 10px 0;">
+        <div class="container flex justify-between items-center">
+            <div class="logo flex items-center gap-1">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--accent-blue)" stroke-width="2">
+                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                    <path d="M12 8v4l3 3"/>
+                </svg>
+                <span style="font-weight: 700;">Cred<span style="color: var(--accent-blue);">AI</span></span>
+            </div>
+            <div style="font-weight: 600;">Application Result</div>
+        </div>
+    </nav>
+
+    <div class="container" style="padding-top: 100px; padding-bottom: 50px;">
+        
+        <div class="glass-card result-hero fade-in" id="hero-card">
+            <div class="decision-icon" id="decision-icon">⌛</div>
+            <h1 id="decision-text" style="letter-spacing: 2px;">PROCESSING</h1>
+            <p style="color: var(--text-secondary); margin-top: 10px;">Application ID: <span id="app-id">--</span></p>
+            <p style="color: var(--text-secondary); font-size: 0.8rem;" id="timestamp">--</p>
+        </div>
+
+        <div class="grid grid-cols-4 gap-2 fade-in" style="margin-bottom: 30px; animation-delay: 0.1s;">
+            <div class="glass-card text-center">
+                <h4>Risk Score</h4>
+                <div class="gauge-container">
+                    <svg viewBox="0 0 36 36" class="circular-chart">
+                        <path class="circle-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                        <path id="risk-gauge" class="circle" stroke-dasharray="0, 100" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                        <text id="risk-text" x="18" y="20.35" class="percentage">--</text>
+                    </svg>
+                </div>
+            </div>
+            <div class="glass-card text-center">
+                <h4>Fraud Score</h4>
+                <div class="gauge-container">
+                    <svg viewBox="0 0 36 36" class="circular-chart">
+                        <path class="circle-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                        <path id="fraud-gauge" class="circle" stroke-dasharray="0, 100" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                        <text id="fraud-text" x="18" y="20.35" class="percentage">--</text>
+                    </svg>
+                </div>
+            </div>
+            <div class="glass-card text-center flex-col justify-center items-center">
+                <h4>Face Match</h4>
+                <h2 id="face-match" style="color: var(--accent-blue); font-size: 2.5rem;">--%</h2>
+                <p>Confidence</p>
+            </div>
+            <div class="glass-card text-center flex-col justify-center items-center">
+                <h4>Voice</h4>
+                <h2 id="voice-conf" style="color: var(--accent-violet); font-size: 2.5rem;">--%</h2>
+                <p>Confidence</p>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-4 fade-in" style="animation-delay: 0.2s;">
+            <!-- LOAN OFFER -->
+            <div class="glass-card" id="offer-card" style="display: none; border-color: var(--accent-teal);">
+                <h3 style="color: var(--accent-teal); margin-bottom: 24px;">✨ Approved Loan Offer</h3>
+                <div style="margin-bottom: 20px;">
+                    <p style="font-size: 0.9rem;">Approved Amount</p>
+                    <h1 id="offer-amount">₹0</h1>
+                </div>
+                <div class="grid grid-cols-2 gap-2" style="margin-bottom: 24px;">
+                    <div>
+                        <p style="font-size: 0.9rem;">Interest Rate</p>
+                        <h3 id="offer-rate">0% p.a.</h3>
+                    </div>
+                    <div>
+                        <p style="font-size: 0.9rem;">Tenure</p>
+                        <h3 id="offer-tenure">0 months</h3>
+                    </div>
+                </div>
+                <div style="background: rgba(0, 212, 170, 0.1); padding: 16px; border-radius: 8px; margin-bottom: 24px;">
+                    <p style="font-size: 0.9rem;">Monthly EMI</p>
+                    <h2 id="offer-emi" style="color: var(--accent-teal);">₹0</h2>
+                </div>
+                <div class="flex gap-2">
+                    <button class="btn btn-success w-full" onclick="showToast('Offer Accepted! redirecting...', 'success')">Accept Offer</button>
+                    <button class="btn btn-secondary w-full">Modify Terms</button>
+                </div>
+            </div>
+
+            <!-- FRAUD ALERTS -->
+            <div class="glass-card" id="alerts-card" style="display: none; border-color: var(--accent-red);">
+                <h3 style="color: var(--accent-amber); margin-bottom: 24px;">⚠️ Flags Detected</h3>
+                <ul id="alerts-list" style="margin-bottom: 24px;"></ul>
+                <p style="font-size: 0.9rem; color: var(--text-secondary);">This application has been flagged and sent for manual underwriter review.</p>
+            </div>
+
+            <!-- SUMMARY -->
+            <div class="glass-card">
+                <h3 style="margin-bottom: 24px;">Applicant Summary</h3>
+                <table style="width: 100%;">
+                    <tr><td style="color: var(--text-secondary);">Age</td><td id="sum-age" style="text-align: right; font-weight: 600;">--</td></tr>
+                    <tr><td style="color: var(--text-secondary);">Gender</td><td id="sum-gender" style="text-align: right; font-weight: 600;">--</td></tr>
+                    <tr><td style="color: var(--text-secondary);">Income</td><td id="sum-income" style="text-align: right; font-weight: 600;">--</td></tr>
+                    <tr><td style="color: var(--text-secondary);">Employment</td><td id="sum-emp" style="text-align: right; font-weight: 600;">--</td></tr>
+                </table>
+            </div>
+        </div>
+
+        <div class="flex justify-center gap-2" style="margin-top: 40px;">
+            <button class="btn btn-primary" onclick="window.print()">Download Report</button>
+            <a href="onboarding.html" class="btn btn-secondary">New Application</a>
+            <a href="index.html" class="btn btn-secondary">Back to Home</a>
+        </div>
+    </div>
+
+    <script src="js/api.js"></script>
+    <script src="js/app.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const resultData = sessionStorage.getItem("applicationResult");
+            const applicantData = sessionStorage.getItem("applicantData");
+
+            let data = null;
+            let appData = null;
+
+            if (resultData && applicantData) {
+                data = JSON.parse(resultData);
+                appData = JSON.parse(applicantData);
+            } else {
+                // Demo Data Fallback
+                data = {
+                    session_id: "DEMO-1234-5678",
+                    timestamp: new Date().toISOString(),
+                    final_decision: "APPROVED",
+                    risk_assessment: {
+                        risk_score: 12.5,
+                        loan_offer: { amount: 500000, interest_rate: 12.5, tenure_months: 36, emi: 16723.45 }
+                    },
+                    fraud_assessment: {
+                        fraud_score: 0,
+                        alerts: []
+                    }
+                };
+                appData = { estimated_age: 28, gender: "F", income: 80000, income_type: "Salaried", face_match_score: 0.98, voice_confidence: 0.95 };
+            }
+
+            // Populate UI
+            document.getElementById('app-id').innerText = data.session_id;
+            document.getElementById('timestamp').innerText = new Date(data.timestamp).toLocaleString();
+
+            const decisionText = document.getElementById('decision-text');
+            const decisionIcon = document.getElementById('decision-icon');
+            const heroCard = document.getElementById('hero-card');
+
+            if (data.final_decision.includes("APPROVED")) {
+                decisionText.innerText = "APPROVED";
+                decisionText.style.color = "var(--accent-teal)";
+                decisionIcon.innerText = "✅";
+                heroCard.style.borderColor = "var(--accent-teal)";
+                
+                // Show offer
+                document.getElementById('offer-card').style.display = 'block';
+                const offer = data.risk_assessment.loan_offer;
+                document.getElementById('offer-amount').innerText = `₹${offer.amount.toLocaleString()}`;
+                document.getElementById('offer-rate').innerText = `${offer.interest_rate}% p.a.`;
+                document.getElementById('offer-tenure').innerText = `${offer.tenure_months} months`;
+                document.getElementById('offer-emi').innerText = `₹${offer.emi.toLocaleString()}`;
+            } else if (data.final_decision.includes("REVIEW")) {
+                decisionText.innerText = "MANUAL REVIEW";
+                decisionText.style.color = "var(--accent-amber)";
+                decisionIcon.innerText = "🔍";
+                heroCard.style.borderColor = "var(--accent-amber)";
+            } else {
+                decisionText.innerText = "REJECTED";
+                decisionText.style.color = "var(--accent-red)";
+                decisionIcon.innerText = "❌";
+                heroCard.style.borderColor = "var(--accent-red)";
+            }
+
+            // Gauges
+            const rScore = data.risk_assessment.risk_score;
+            document.getElementById('risk-text').innerText = rScore;
+            const rGauge = document.getElementById('risk-gauge');
+            rGauge.setAttribute('stroke-dasharray', `${rScore}, 100`);
+            rGauge.className.baseVal = "circle " + (rScore < 20 ? "green" : rScore < 60 ? "orange" : "red");
+
+            const fScore = data.fraud_assessment.fraud_score;
+            document.getElementById('fraud-text').innerText = fScore;
+            const fGauge = document.getElementById('fraud-gauge');
+            fGauge.setAttribute('stroke-dasharray', `${fScore}, 100`);
+            fGauge.className.baseVal = "circle " + (fScore < 20 ? "green" : fScore < 60 ? "orange" : "red");
+
+            document.getElementById('face-match').innerText = `${Math.round(appData.face_match_score * 100)}%`;
+            document.getElementById('voice-conf').innerText = `${Math.round((appData.voice_confidence || 0.95) * 100)}%`;
+
+            // Alerts
+            if (data.fraud_assessment.alerts && data.fraud_assessment.alerts.length > 0) {
+                const alertsCard = document.getElementById('alerts-card');
+                alertsCard.style.display = 'block';
+                const ul = document.getElementById('alerts-list');
+                data.fraud_assessment.alerts.forEach(a => {
+                    ul.innerHTML += `<li style="padding: 8px 0; border-bottom: 1px solid var(--border-color);">
+                        <span class="badge badge-warning">${a.severity}</span> ${a.rule}
+                    </li>`;
+                });
+            }
+
+            // Summary
+            document.getElementById('sum-age').innerText = appData.estimated_age || appData.declared_age || '--';
+            document.getElementById('sum-gender').innerText = appData.gender || '--';
+            document.getElementById('sum-income').innerText = `₹${(appData.income || 0).toLocaleString()}`;
+            document.getElementById('sum-emp').innerText = appData.income_type || '--';
+
+            // Clear sessionStorage after loading to not pollute
+            // sessionStorage.removeItem("applicationResult");
+            // sessionStorage.removeItem("applicantData");
+        });
+    </script>
+</body>
+</html>

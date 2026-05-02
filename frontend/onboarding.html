@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CredAI - Video KYC</title>
+  <link rel="stylesheet" href="css/style.css">
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+</head>
+<body>
+  <div class="gradient-bg">
+      <div class="glow-orb orb-1"></div>
+      <div class="glow-orb orb-2"></div>
+      <div class="glow-orb orb-3"></div>
+  </div>
+
+  <nav class="navbar glass-card">
+      <div class="logo">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+              <path d="M12 8v4l3 3"/>
+          </svg>
+          <span>Cred<span class="text-accent">AI</span></span>
+      </div>
+      <div class="nav-links">
+          <a href="index.html">Home</a>
+          <a href="dashboard.html">Dashboard</a>
+          <div class="user-profile">
+              <div class="avatar">R</div>
+          </div>
+      </div>
+  </nav>
+
+  <!-- MAIN CONTENT: 3-column grid on desktop, stacked on mobile -->
+  <main class="onboarding-main" style="display:grid; grid-template-columns: 280px 1fr 380px; gap:20px; padding:20px; min-height:100vh;">
+    
+    <!-- ========== LEFT PANEL ========== -->
+    <aside class="left-panel glass-card" style="padding:20px; border-radius:16px; display:flex; flex-direction:column; gap:16px;">
+      
+      <!-- Language Selector -->
+      <div class="lang-selector-section">
+        <h3 style="color:rgba(255,255,255,0.7); font-size:0.85rem; text-transform:uppercase; letter-spacing:0.08em;">Language / भाषा / ಭಾಷೆ</h3>
+        <div style="display:flex; flex-direction:column; gap:8px; margin-top:10px;">
+          <button class="lang-pill selected" data-lang="en" onclick="selectLanguage('en')">🇬🇧 English</button>
+          <button class="lang-pill" data-lang="hi" onclick="selectLanguage('hi')">🇮🇳 हिंदी</button>
+          <button class="lang-pill" data-lang="kn" onclick="selectLanguage('kn')">🏳️ ಕನ್ನಡ</button>
+        </div>
+      </div>
+      
+      <!-- PDF Upload -->
+      <div class="pdf-upload-section">
+        <h3 style="color:rgba(255,255,255,0.7); font-size:0.85rem; text-transform:uppercase; letter-spacing:0.08em;">Loan Form PDF</h3>
+        <div id="pdf-drop-zone" class="pdf-dropzone" 
+             style="border:2px dashed rgba(99,179,237,0.3); border-radius:12px; padding:20px; text-align:center; cursor:pointer; transition:all 0.3s ease;"
+             onclick="document.getElementById('pdf-file-input').click()"
+             ondragover="event.preventDefault()" 
+             ondrop="handlePdfDrop(event)">
+          <div class="pdf-drop-icon" style="font-size:2rem; margin-bottom:8px;">📄</div>
+          <p style="font-size:0.8rem; color:rgba(255,255,255,0.5);">Drop PDF here or click to upload</p>
+          <p style="font-size:0.7rem; color:rgba(255,255,255,0.3); margin-top:4px;">Optional — will use default form if none</p>
+        </div>
+        <input type="file" id="pdf-file-input" accept=".pdf" style="display:none" onchange="handlePdfUpload(event)">
+        <div id="pdf-status" style="margin-top:8px; font-size:0.8rem; color:rgba(99,179,237,0.8); display:none;"></div>
+      </div>
+      
+      <!-- Progress Panel -->
+      <div class="progress-section">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+          <h3 style="color:rgba(255,255,255,0.7); font-size:0.85rem; text-transform:uppercase; letter-spacing:0.08em;">Progress</h3>
+          <span id="progress-percent" style="font-size:1.2rem; font-weight:700; color:#63b3ed;">0%</span>
+        </div>
+        <div style="background:rgba(255,255,255,0.06); border-radius:4px; height:6px; overflow:hidden;">
+          <div id="progress-bar-fill" class="progress-fill" style="height:100%; width:0%; border-radius:4px;"></div>
+        </div>
+        <div id="field-checklist" style="margin-top:12px; display:flex; flex-direction:column; gap:4px; max-height:300px; overflow-y:auto;">
+          <!-- Dynamically rendered field status items -->
+        </div>
+      </div>
+      
+      <!-- Start Button -->
+      <button id="start-btn" onclick="startAssistant()" 
+              style="margin-top:auto; padding:14px; border-radius:12px; background:linear-gradient(135deg,#4299e1,#7c3aed); border:none; color:white; font-weight:700; font-size:1rem; cursor:pointer; transition:all 0.3s ease; display:flex; align-items:center; justify-content:center; gap:8px;">
+        🎤 Start AI Assistant
+      </button>
+    </aside>
+
+    <!-- ========== CENTER PANEL ========== -->
+    <section class="center-panel" style="display:flex; flex-direction:column; gap:16px;">
+      
+      <!-- Camera / Face Analysis -->
+      <div class="camera-card glass-card" style="padding:16px; border-radius:16px; position:relative;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+          <h3 style="font-size:0.9rem; font-weight:600; color:rgba(255,255,255,0.9);">📸 Identity Verification</h3>
+          <div style="display:flex; gap:6px; flex-wrap:wrap;" id="face-badges">
+            <span class="face-badge inactive" id="badge-face">⚪ No Face</span>
+            <span class="face-badge inactive" id="badge-age">📅 Age: --</span>
+            <span class="face-badge inactive" id="badge-emotion">😐 --</span>
+            <span class="face-badge inactive" id="badge-liveness">🔵 Checking</span>
+          </div>
+        </div>
+        <div style="position:relative; border-radius:12px; overflow:hidden; background:#0a0f1a;">
+          <video id="webcam-video" autoplay playsinline muted 
+                 style="width:100%; max-height:280px; object-fit:cover; border-radius:12px; display:block;"></video>
+          <canvas id="face-canvas" style="display:none;"></canvas>
+          <!-- Liveness overlay indicator -->
+          <div id="liveness-overlay" style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); display:none;">
+            <div style="border:3px solid rgba(99,255,150,0.8); border-radius:50%; width:120px; height:160px; animation:pulse 2s infinite;"></div>
+          </div>
+        </div>
+        <div style="display:flex; gap:8px; margin-top:12px; flex-wrap:wrap;">
+          <button onclick="captureSnapshot()" style="padding:8px 16px; border-radius:8px; background:rgba(99,179,237,0.15); border:1px solid rgba(99,179,237,0.3); color:#90cdf4; font-size:0.8rem; cursor:pointer;">📷 Capture</button>
+          <button onclick="toggleCamera()" id="camera-toggle-btn" style="padding:8px 16px; border-radius:8px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12); color:rgba(255,255,255,0.7); font-size:0.8rem; cursor:pointer;">🎥 Camera Off</button>
+        </div>
+      </div>
+      
+      <!-- Live Form Preview -->
+      <div class="form-preview-card glass-card" style="padding:16px; border-radius:16px; flex:1; overflow-y:auto;">
+        <h3 style="font-size:0.9rem; font-weight:600; color:rgba(255,255,255,0.9); margin-bottom:14px;">📋 Form Preview — Auto-filling</h3>
+        
+        <div class="form-group-section" style="margin-bottom:16px;">
+          <div id="form-personal"></div>
+        </div>
+        <div id="form-contact" class="form-group-section" style="margin-bottom:16px;"></div>
+        <div id="form-employment" class="form-group-section" style="margin-bottom:16px;"></div>
+        <div id="form-loan" class="form-group-section" style="margin-bottom:16px;"></div>
+        <div id="form-identity" class="form-group-section" style="margin-bottom:16px;"></div>
+        
+        <!-- Submit Review Button (hidden until complete) -->
+        <div id="submit-section" style="display:none; margin-top:16px;">
+          <button onclick="submitApplication()" 
+                  style="width:100%; padding:16px; border-radius:12px; background:linear-gradient(135deg,#38a169,#2f855a); border:none; color:white; font-weight:700; font-size:1rem; cursor:pointer;">
+            ✅ Submit Application
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========== RIGHT PANEL ========== -->
+    <aside class="right-panel glass-card" style="padding:20px; border-radius:16px; display:flex; flex-direction:column; gap:16px; height:calc(100vh - 100px); position:sticky; top:20px;">
+      
+      <!-- AI Assistant Header -->
+      <div style="display:flex; align-items:center; gap:12px;">
+        <div id="assistant-avatar" style="width:44px; height:44px; border-radius:50%; background:linear-gradient(135deg,#4299e1,#7c3aed); display:flex; align-items:center; justify-content:center; font-size:1.3rem;">🤖</div>
+        <div>
+          <h3 style="font-size:0.95rem; font-weight:700; color:white;">CredAI Assistant</h3>
+          <p id="assistant-status" style="font-size:0.75rem; color:rgba(99,179,237,0.8);">Ready to help</p>
+        </div>
+      </div>
+      
+      <!-- Chat Conversation -->
+      <div id="chat-container" style="flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:10px; padding:4px;">
+        <!-- Initial message shown on load -->
+        <div class="bubble-ai">
+          <p style="font-size:0.875rem; color:rgba(255,255,255,0.9);">👋 Please select a language above and click <strong>Start AI Assistant</strong> to begin.</p>
+        </div>
+      </div>
+      
+      <!-- Interim Transcript (shows while listening) -->
+      <div id="interim-transcript-area" class="interim-transcript" style="display:none;">
+        <span id="interim-text"></span>
+      </div>
+      
+      <!-- Current Question Card -->
+      <div id="current-question-card" style="background:rgba(66,153,225,0.08); border:1px solid rgba(66,153,225,0.2); border-radius:12px; padding:14px; display:none;">
+        <p style="font-size:0.7rem; color:rgba(99,179,237,0.7); text-transform:uppercase; letter-spacing:0.08em; margin-bottom:6px;" id="current-field-label">Field</p>
+        <p style="font-size:0.95rem; color:white; font-weight:500;" id="current-question-text">Question here</p>
+      </div>
+      
+      <!-- Mic Controls -->
+      <div style="display:flex; align-items:center; justify-content:center; gap:16px;">
+        <button onclick="repeatQuestion()" style="padding:8px 14px; border-radius:8px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12); color:rgba(255,255,255,0.7); font-size:0.8rem; cursor:pointer;">🔄 Repeat</button>
+        
+        <button id="mic-btn" class="mic-btn" onclick="toggleMic()">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="white">
+            <path d="M12 15c1.66 0 3-1.34 3-3V6c0-1.66-1.34-3-3-3S9 4.34 9 6v6c0 1.66 1.34 3 3 3z"/>
+            <path d="M17 12c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-2.08c3.39-.49 6-3.39 6-6.92h-2z"/>
+          </svg>
+        </button>
+        
+        <!-- Waveform (shown when listening) -->
+        <div id="mic-waveform" class="mic-waveform" style="display:none; align-items:flex-end; gap:2px; height:30px;">
+          <span style="width:4px;height:30px;background:linear-gradient(#4299e1,#7c3aed);border-radius:4px;display:inline-block;"></span>
+          <span style="width:4px;height:30px;background:linear-gradient(#4299e1,#7c3aed);border-radius:4px;display:inline-block;"></span>
+          <span style="width:4px;height:30px;background:linear-gradient(#4299e1,#7c3aed);border-radius:4px;display:inline-block;"></span>
+          <span style="width:4px;height:30px;background:linear-gradient(#4299e1,#7c3aed);border-radius:4px;display:inline-block;"></span>
+          <span style="width:4px;height:30px;background:linear-gradient(#4299e1,#7c3aed);border-radius:4px;display:inline-block;"></span>
+        </div>
+        
+        <button onclick="skipField()" style="padding:8px 14px; border-radius:8px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12); color:rgba(255,255,255,0.7); font-size:0.8rem; cursor:pointer;">⏭ Skip</button>
+      </div>
+      
+      <!-- Typed fallback -->
+      <div id="typed-fallback" style="display:none;">
+        <div style="display:flex; gap:8px;">
+          <input type="text" id="typed-answer-input" 
+                 placeholder="Type your answer here..."
+                 style="flex:1; padding:10px 14px; border-radius:8px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12); color:white; font-size:0.875rem; outline:none;"
+                 onkeydown="if(event.key==='Enter') submitTypedAnswer()">
+          <button onclick="submitTypedAnswer()" style="padding:10px 14px; border-radius:8px; background:rgba(99,179,237,0.2); border:1px solid rgba(99,179,237,0.4); color:#90cdf4; cursor:pointer;">→</button>
+        </div>
+      </div>
+    </aside>
+  </main>
+
+  <script src="js/api.js"></script>
+  <script src="js/speech.js"></script>
+  <script src="js/video.js"></script>
+  <script src="js/pdf-form.js"></script>
+  <script src="js/assistant.js"></script>
+  
+  <script>
+    // Link video.js live analysis to our new face badges
+    window.sessionStartTime = Date.now();
+    
+    // We override updateFaceUI from video.js to use our new badges
+    window.updateFaceUI = function(data) {
+        window.lastFaceAnalysis = data;
+        
+        const bFace = document.getElementById('badge-face');
+        const bAge = document.getElementById('badge-age');
+        const bEmotion = document.getElementById('badge-emotion');
+        const bLive = document.getElementById('badge-liveness');
+        
+        if(data.face_detected) {
+            bFace.className = 'face-badge active';
+            bFace.textContent = '🟢 Face Detected';
+            
+            bAge.className = 'face-badge active';
+            bAge.textContent = `📅 Age: ${data.estimated_age}`;
+            
+            bEmotion.className = 'face-badge active';
+            bEmotion.textContent = `😐 ${data.dominant_emotion}`;
+            
+            bLive.className = data.liveness_status === 'active' ? 'face-badge active' : 'face-badge warning';
+            bLive.textContent = `🔵 ${data.liveness_status}`;
+        } else {
+            bFace.className = 'face-badge warning';
+            bFace.textContent = '🟡 No Face';
+            bLive.className = 'face-badge warning';
+            bLive.textContent = '⚪ Checking';
+        }
+    };
+    
+    // Set up continuous capture interval that sends frames to /api/analysis/live-face-status
+    setInterval(async () => {
+        if(!window.isCameraOn) return;
+        const video = document.getElementById('webcam-video');
+        const canvas = document.getElementById('face-canvas');
+        if (!video || !canvas || video.videoWidth === 0) return;
+        
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        
+        canvas.toBlob(async (blob) => {
+            const fd = new FormData();
+            fd.append("file", blob, "frame.jpg");
+            try {
+                const res = await fetch('/api/analysis/live-face-status', { method: 'POST', body: fd }).then(r=>r.json());
+                if(res && res.success) window.updateFaceUI(res);
+            } catch (err) {}
+        }, 'image/jpeg', 0.8);
+    }, 2000);
+  </script>
+</body>
+</html>

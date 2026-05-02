@@ -1,0 +1,891 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>CredAI - Voice Loan Assistant</title>
+  <style>
+    /* CSS goes here */
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;800&family=JetBrains+Mono&display=swap');
+
+    :root {
+      --bg-deep: #0a0d14;
+      --bg-base: #0f1219;
+      --bg-card: #151b27;
+      --bg-raised: #1c2436;
+      --border: rgba(255,255,255,0.07);
+      --accent-blue: #3b82f6;
+      --accent-cyan: #06b6d4;
+      --accent-green: #10b981;
+      --accent-red: #ef4444;
+      --accent-gold: #f59e0b;
+      --text-primary: #f1f5f9;
+      --text-muted: #64748b;
+      --text-faint: #334155;
+      font-family: 'Inter', sans-serif;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    
+    body {
+      background-color: var(--bg-deep);
+      color: var(--text-primary);
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      position: relative;
+    }
+
+    /* Gradient Background Blobs */
+    .bg-blobs {
+      position: absolute;
+      top: 0; left: 0; width: 100%; height: 100%;
+      z-index: -1;
+      overflow: hidden;
+      opacity: 0.06;
+    }
+    .blob {
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(100px);
+      animation: float 20s infinite ease-in-out alternate;
+    }
+    .blob-1 { top: -10%; left: -10%; width: 50vw; height: 50vw; background: var(--accent-blue); }
+    .blob-2 { bottom: -10%; right: -10%; width: 60vw; height: 60vw; background: var(--accent-cyan); animation-delay: -5s; }
+    .blob-3 { top: 30%; left: 40%; width: 40vw; height: 40vw; background: #8b5cf6; animation-delay: -10s; }
+
+    @keyframes float {
+      0% { transform: translate(0, 0) scale(1); }
+      100% { transform: translate(50px, 50px) scale(1.1); }
+    }
+
+    /* Header */
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 16px 24px;
+      background: rgba(15, 18, 25, 0.8);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      z-index: 10;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 1.5rem;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+    }
+    
+    .btn {
+      padding: 10px 20px;
+      border-radius: 8px;
+      border: none;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.2s;
+    }
+    .btn-primary { background: var(--accent-blue); color: white; }
+    .btn-primary:hover { filter: brightness(1.1); box-shadow: 0 0 15px rgba(59,130,246,0.4); }
+    .btn-green { background: var(--accent-green); color: white; }
+    .btn-green:hover { filter: brightness(1.1); box-shadow: 0 0 15px rgba(16,185,129,0.4); }
+
+    /* Main Layout */
+    main {
+      display: flex;
+      flex: 1;
+      padding: 20px;
+      gap: 20px;
+      height: calc(100vh - 120px);
+    }
+
+    .panel {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.05);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      animation: slideIn 0.5s ease-out backwards;
+    }
+    .panel:hover {
+      box-shadow: 0 8px 30px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.05);
+    }
+
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Left Panel */
+    .left-panel { width: 260px; padding: 20px; gap: 24px; animation-delay: 0.1s; overflow-y: auto; }
+    
+    .lang-btn {
+      width: 100%;
+      padding: 12px;
+      background: var(--bg-raised);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text-primary);
+      margin-bottom: 8px;
+      cursor: pointer;
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      transition: all 0.2s;
+    }
+    .lang-btn:hover { background: rgba(255,255,255,0.05); }
+    .lang-btn.active { 
+      border-color: var(--accent-blue); 
+      background: rgba(59,130,246,0.1);
+      box-shadow: 0 0 10px rgba(59,130,246,0.2);
+    }
+
+    .progress-container {
+      background: var(--bg-raised);
+      height: 8px;
+      border-radius: 4px;
+      overflow: hidden;
+      margin-top: 8px;
+    }
+    .progress-bar {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, var(--accent-blue), var(--accent-cyan));
+      transition: width 0.5s ease-out;
+    }
+
+    .checklist { margin-top: 16px; font-size: 0.85rem; color: var(--text-muted); }
+    .checklist-item { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+    .checklist-item.done { color: var(--accent-green); }
+    .checklist-item.active { color: var(--accent-blue); font-weight: 500; }
+
+    /* Center Panel */
+    .center-panel { flex: 1; gap: 20px; animation-delay: 0.2s; display: flex; flex-direction: column; background: transparent; border: none; box-shadow: none; }
+    
+    .video-card, .form-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px;
+    }
+    
+    .video-card { height: 240px; display: flex; flex-direction: column; position: relative; }
+    .video-container {
+      flex: 1;
+      background: #000;
+      border-radius: 8px;
+      overflow: hidden;
+      position: relative;
+    }
+    #webcam { width: 100%; height: 100%; object-fit: cover; }
+    #face-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
+    
+    .badges {
+      position: absolute; top: 10px; left: 10px; right: 10px;
+      display: flex; gap: 8px; flex-wrap: wrap;
+    }
+    .badge {
+      background: rgba(15,18,25,0.8);
+      backdrop-filter: blur(4px);
+      padding: 4px 10px;
+      border-radius: 12px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      display: flex; align-items: center; gap: 4px;
+      border: 1px solid var(--border);
+    }
+    .badge.green { color: var(--accent-green); border-color: rgba(16,185,129,0.3); }
+    .badge.red { color: var(--accent-red); border-color: rgba(239,68,68,0.3); }
+
+    .form-card { flex: 1; overflow-y: auto; }
+    .form-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+    .form-section { grid-column: 1 / -1; margin-top: 16px; margin-bottom: 8px; color: var(--accent-cyan); font-weight: 700; font-size: 0.85rem; letter-spacing: 1px; text-transform: uppercase; }
+    .form-group {
+      background: var(--bg-raised);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px 16px;
+      transition: all 0.3s;
+    }
+    .form-group.active {
+      border-left: 3px solid var(--accent-blue);
+      box-shadow: 0 0 20px rgba(59,130,246,0.15);
+      background: rgba(59,130,246,0.05);
+    }
+    .form-group.filled {
+      border-color: rgba(16,185,129,0.3);
+    }
+    .form-label { font-size: 0.75rem; color: var(--text-muted); margin-bottom: 4px; display: block; }
+    .form-input {
+      background: transparent;
+      border: none;
+      color: var(--text-primary);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.95rem;
+      width: 100%;
+      outline: none;
+    }
+
+    /* Right Panel */
+    .right-panel { width: 380px; display: flex; flex-direction: column; animation-delay: 0.3s; }
+    .chat-header {
+      padding: 20px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .bot-avatar {
+      width: 40px; height: 40px;
+      background: rgba(59,130,246,0.2);
+      border-radius: 50%;
+      display: flex; justify-content: center; align-items: center;
+      font-size: 1.2rem;
+      border: 1px solid rgba(59,130,246,0.4);
+    }
+    .bot-avatar.speaking {
+      animation: botPulse 1.5s infinite alternate;
+    }
+    @keyframes botPulse {
+      from { box-shadow: 0 0 0 0 rgba(59,130,246,0.4); }
+      to { box-shadow: 0 0 0 15px rgba(59,130,246,0); }
+    }
+
+    .chat-body {
+      flex: 1;
+      padding: 20px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .bubble {
+      max-width: 85%;
+      padding: 12px 16px;
+      border-radius: 16px;
+      font-size: 0.9rem;
+      line-height: 1.4;
+      animation: slideUp 0.3s ease-out forwards;
+    }
+    @keyframes slideUp {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .bubble.ai {
+      align-self: flex-start;
+      background: var(--bg-raised);
+      border: 1px solid var(--border);
+      border-bottom-left-radius: 4px;
+    }
+    .bubble.user {
+      align-self: flex-end;
+      background: linear-gradient(135deg, var(--accent-blue), #2563eb);
+      color: white;
+      border-bottom-right-radius: 4px;
+    }
+
+    .mic-section {
+      padding: 20px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+    }
+    .waveform {
+      display: flex;
+      gap: 4px;
+      height: 30px;
+      align-items: center;
+    }
+    .wave-bar {
+      width: 4px;
+      height: 4px;
+      background: var(--accent-blue);
+      border-radius: 2px;
+      transition: height 0.1s;
+    }
+    .mic-btn {
+      width: 64px; height: 64px;
+      border-radius: 50%;
+      background: var(--bg-raised);
+      border: 2px solid var(--border);
+      color: white;
+      font-size: 1.5rem;
+      cursor: pointer;
+      display: flex; justify-content: center; align-items: center;
+      transition: all 0.3s;
+      position: relative;
+    }
+    .mic-btn.listening {
+      background: rgba(239,68,68,0.1);
+      border-color: var(--accent-red);
+      color: var(--accent-red);
+      animation: micPulse 1.5s infinite;
+    }
+    @keyframes micPulse {
+      0% { box-shadow: 0 0 0 0 rgba(239,68,68,0.4); }
+      70% { box-shadow: 0 0 0 20px rgba(239,68,68,0); }
+      100% { box-shadow: 0 0 0 0 rgba(239,68,68,0); }
+    }
+
+    /* Footer */
+    footer {
+      padding: 10px 24px;
+      background: var(--bg-base);
+      border-top: 1px solid var(--border);
+      display: flex;
+      gap: 20px;
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+    .status-dot {
+      display: inline-block;
+      width: 8px; height: 8px;
+      background: var(--accent-green);
+      border-radius: 50%;
+      margin-right: 6px;
+      box-shadow: 0 0 8px var(--accent-green);
+    }
+
+    /* Confetti */
+    .confetti {
+      position: absolute;
+      width: 10px; height: 10px;
+      background: red;
+      animation: fall linear forwards;
+      z-index: 1000;
+    }
+    @keyframes fall {
+      to { transform: translateY(100vh) rotate(720deg); }
+    }
+    
+    .hidden { display: none !important; }
+  </style>
+</head>
+<body>
+
+  <div class="bg-blobs">
+    <div class="blob blob-1"></div>
+    <div class="blob blob-2"></div>
+    <div class="blob blob-3"></div>
+  </div>
+
+  <header>
+    <div class="logo">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--accent-blue)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+        <path d="M12 8v4l3 3"></path>
+      </svg>
+      CredAI
+    </div>
+    <div style="display:flex; gap:12px;">
+      <button class="btn btn-green" id="start-btn" onclick="CredAI.flow.start()">
+        ▶ Start Interview
+      </button>
+    </div>
+  </header>
+
+  <main>
+    <!-- Left Panel -->
+    <div class="panel left-panel">
+      <div>
+        <h3 style="font-size:0.9rem; color:var(--text-muted); margin-bottom:12px;">LANGUAGE</h3>
+        <div class="lang-btn active" onclick="CredAI.setLanguage('en', event)">🇬🇧 English</div>
+        <div class="lang-btn" onclick="CredAI.setLanguage('hi', event)">🇮🇳 हिंदी (Hindi)</div>
+        <div class="lang-btn" onclick="CredAI.setLanguage('kn', event)">🏳️ ಕನ್ನಡ (Kannada)</div>
+      </div>
+
+      <div style="margin-top:auto;">
+        <div style="display:flex; justify-content:space-between; font-size:0.85rem; font-weight:600;">
+          <span>Progress</span>
+          <span id="progress-text" style="color:var(--accent-cyan)">0%</span>
+        </div>
+        <div class="progress-container">
+          <div class="progress-bar" id="progress-bar"></div>
+        </div>
+        <div class="checklist" id="checklist">
+          <!-- Populated by JS -->
+        </div>
+      </div>
+    </div>
+
+    <!-- Center Panel -->
+    <div class="center-panel">
+      <!-- Video -->
+      <div class="panel video-card">
+        <div class="badges">
+          <div class="badge green" id="badge-face"><span class="status-dot"></span> ✓ Face Detected</div>
+          <div class="badge" id="badge-age">Age: --</div>
+          <div class="badge" id="badge-liveness">Liveness: OK</div>
+        </div>
+        <div class="video-container">
+          <video id="webcam" autoplay muted playsinline></video>
+          <canvas id="face-canvas"></canvas>
+        </div>
+      </div>
+
+      <!-- Form -->
+      <div class="panel form-card">
+        <h2 style="font-size:1.1rem; margin-bottom:16px; border-bottom:1px solid var(--border); padding-bottom:12px;">Form Preview — Auto-filling</h2>
+        <div class="form-grid" id="form-grid">
+          <!-- Populated by JS -->
+        </div>
+      </div>
+    </div>
+
+    <!-- Right Panel -->
+    <div class="panel right-panel">
+      <div class="chat-header">
+        <div class="bot-avatar" id="bot-avatar">🤖</div>
+        <div>
+          <div style="font-weight:700;">CredAI Assistant</div>
+          <div style="font-size:0.75rem; color:var(--accent-blue);" id="assistant-status">Ready to start</div>
+        </div>
+      </div>
+
+      <div class="chat-body" id="chat-body">
+        <div class="bubble ai">Select a language and click 'Start Interview' to begin.</div>
+      </div>
+
+      <div class="mic-section">
+        <div class="waveform" id="waveform">
+          <!-- 20 bars -->
+        </div>
+        <div style="display:flex; gap:16px; align-items:center;">
+          <button class="btn btn-secondary" style="background:var(--bg-raised); border:1px solid var(--border); color:var(--text-primary); padding:8px 12px; border-radius:6px; cursor:pointer;" onclick="CredAI.flow.repeat()">⟳ Repeat</button>
+          
+          <button class="mic-btn" id="mic-btn" onclick="CredAI.speech.toggleMic()">
+            🎤
+          </button>
+          
+          <button class="btn btn-secondary" style="background:var(--bg-raised); border:1px solid var(--border); color:var(--text-primary); padding:8px 12px; border-radius:6px; cursor:pointer;" onclick="CredAI.flow.skip()">⏭ Skip</button>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <footer>
+    <div><span class="status-dot"></span> Backend: Browser Mode</div>
+    <div><span class="status-dot"></span> Speech API: Active</div>
+    <div id="camera-status"><span class="status-dot"></span> Camera: Active</div>
+  </footer>
+
+  <!-- Face API -->
+  <script defer src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
+
+  <script>
+    // Create 20 waveform bars
+    const waveform = document.getElementById('waveform');
+    for(let i=0; i<20; i++) {
+      const bar = document.createElement('div');
+      bar.className = 'wave-bar';
+      waveform.appendChild(bar);
+    }
+
+    const questionsData = [
+      { id: 'fullName', label: 'Full Name', section: 'PERSONAL INFORMATION', en: "What is your full name?", hi: "Aapka poora naam kya hai?", kn: "Nimma poorna hesaru yenu?" },
+      { id: 'dob', label: 'Date of Birth', en: "What is your date of birth? Please say day, month, and year.", hi: "Aapki janam tithi kya hai? Din, mahina, aur saal batayein.", kn: "Nimma huttida dinanka yenu? Dina, thingalu mattu varsha heli." },
+      { id: 'gender', label: 'Gender', en: "Are you male or female?", hi: "Aap purush hain ya mahila?", kn: "Neevu gandu athava hennu?" },
+      { id: 'marital', label: 'Marital Status', en: "What is your marital status?", hi: "Aapki vaivahik sthiti kya hai?", kn: "Nimma vivaha sthiti yenu?" },
+      { id: 'dependents', label: 'Dependents', en: "How many dependents do you have?", hi: "Aapke kitne aashrit hain?", kn: "Nimage eshtu aashritariddare?" },
+      
+      { id: 'phone', label: 'Phone Number', section: 'CONTACT DETAILS', en: "What is your mobile phone number?", hi: "Aapka mobile number kya hai?", kn: "Nimma mobile number yenu?" },
+      { id: 'email', label: 'Email Address', en: "What is your email address? Say skip if you don't have one.", hi: "Aapka email kya hai? Agar nahi hai toh skip kahein.", kn: "Nimma email address yenu? Illa endare skip heli." },
+      { id: 'address', label: 'Address', en: "What is your full residential address?", hi: "Aapka poora pata kya hai?", kn: "Nimma poorna vilasa yenu?" },
+      { id: 'city', label: 'City', en: "Which city do you live in?", hi: "Aap kis shahar mein rehte hain?", kn: "Neevu yava nagaradalli vasisuttiddiri?" },
+      { id: 'state', label: 'State', en: "Which state do you live in?", hi: "Aap kis rajya mein rehte hain?", kn: "Neevu yava rajyadalli vasisuttiddiri?" },
+      { id: 'pincode', label: 'PIN Code', en: "What is your PIN code?", hi: "Aapka PIN code kya hai?", kn: "Nimma PIN code yenu?" },
+
+      { id: 'occupation', label: 'Occupation Type', section: 'EMPLOYMENT', en: "What is your occupation?", hi: "Aapka pesha kya hai?", kn: "Nimma udyoga yenu?" },
+      { id: 'employer', label: 'Employer Name', en: "What is your employer or business name?", hi: "Aapke employer ya business ka naam kya hai?", kn: "Nimma udyogadata athava vyaparada hesaru yenu?" },
+      { id: 'income', label: 'Monthly Income (₹)', en: "What is your approximate monthly income in rupees?", hi: "Aapki masik aay lagbhag kitni hai rupayon mein?", kn: "Nimma masika adaya sumaru eshtu rupayigalu?" },
+      { id: 'employment_duration', label: 'Employment Duration', en: "How long have you been in your current job or business? In years.", hi: "Aap kitne saal se is kaam mein hain?", kn: "Neevu eshtu varshagalinda ee kelasadalliddiri?" },
+
+      { id: 'loan_amount', label: 'Loan Amount Required (₹)', section: 'LOAN DETAILS', en: "How much loan do you need? Tell me the amount in rupees.", hi: "Aapko kitna loan chahiye? Rupayon mein batayein.", kn: "Nimage eshtu saala beku? Rupayigalalli heli." },
+      { id: 'loan_purpose', label: 'Loan Purpose', en: "What is the purpose of this loan?", hi: "Is loan ka uddeshya kya hai?", kn: "Ee saalada uddesha yenu?" },
+      { id: 'loan_tenure', label: 'Preferred Tenure', en: "How many months or years would you like to repay this loan over?", hi: "Aap kitne mahine ya saal mein loan chukana chahenge?", kn: "Neevu eshtu thingalu athava varshagalalli saala thirisalu bayasuttiri?" },
+
+      { id: 'existing_loans', label: 'Existing Loans', section: 'FINANCIAL BACKGROUND', en: "Do you have any existing loans? Say yes or no.", hi: "Kya aapka pehle se koi loan chal raha hai? Haan ya nahi.", kn: "Nimage haleya saala idheya? Houdu athava illa heli." },
+      { id: 'credit_score', label: 'Credit Score', en: "What is your approximate credit score if you know it? Otherwise say I don't know.", hi: "Agar aapko apna credit score pata hai toh batayein, warna kahen mujhe nahi pata.", kn: "Nimma credit score gottiddare heli, illavadare gottilla heli." }
+    ];
+
+    const CredAI = {
+      state: {
+        currentQuestionIndex: -1,
+        formData: {},
+        language: 'en',
+        langCode: 'en-IN',
+        isListening: false,
+        isSpeaking: false,
+        totalFields: questionsData.length
+      },
+
+      init() {
+        this.renderForm();
+        this.camera.start();
+        this.waveform.init();
+      },
+
+      setLanguage(lang, e) {
+        this.state.language = lang;
+        this.state.langCode = lang === 'en' ? 'en-IN' : (lang === 'hi' ? 'hi-IN' : 'kn-IN');
+        document.querySelectorAll('.lang-btn').forEach(b => b.classList.remove('active'));
+        if(e) e.currentTarget.classList.add('active');
+        if(this.state.currentQuestionIndex === -1) {
+          const msgs = {
+            en: "Language set to English. Click Start Interview.",
+            hi: "भाषा हिंदी सेट हो गई है। स्टार्ट इंटरव्यू पर क्लिक करें।",
+            kn: "ಭಾಷೆ ಕನ್ನಡಕ್ಕೆ ಹೊಂದಿಸಲಾಗಿದೆ. ಸ್ಟಾರ್ಟ್ ಇಂಟರ್ವ್ಯೂ ಕ್ಲಿಕ್ ಮಾಡಿ."
+          };
+          this.chat.addAIMessage(msgs[lang]);
+        }
+      },
+
+      renderForm() {
+        const grid = document.getElementById('form-grid');
+        const checklist = document.getElementById('checklist');
+        grid.innerHTML = '';
+        checklist.innerHTML = '';
+
+        questionsData.forEach((q, idx) => {
+          if(q.section) {
+            const sec = document.createElement('div');
+            sec.className = 'form-section';
+            sec.innerText = q.section;
+            grid.appendChild(sec);
+          }
+          const group = document.createElement('div');
+          group.className = 'form-group';
+          group.id = `group-${q.id}`;
+          group.innerHTML = `
+            <label class="form-label">${q.label}</label>
+            <input type="text" class="form-input" id="input-${q.id}" readonly>
+          `;
+          grid.appendChild(group);
+
+          const check = document.createElement('div');
+          check.className = 'checklist-item';
+          check.id = `check-${q.id}`;
+          check.innerHTML = `○ ${q.label}`;
+          checklist.appendChild(check);
+        });
+      },
+
+      flow: {
+        start() {
+          document.getElementById('start-btn').style.display = 'none';
+          CredAI.state.currentQuestionIndex = 0;
+          this.askCurrent();
+        },
+        askCurrent() {
+          if(CredAI.state.currentQuestionIndex >= questionsData.length) {
+            this.complete();
+            return;
+          }
+          const q = questionsData[CredAI.state.currentQuestionIndex];
+          const text = q[CredAI.state.language];
+          
+          // Highlight
+          document.querySelectorAll('.form-group').forEach(el => el.classList.remove('active'));
+          document.getElementById(`group-${q.id}`).classList.add('active');
+          document.getElementById(`group-${q.id}`).scrollIntoView({behavior: 'smooth', block: 'center'});
+          
+          document.querySelectorAll('.checklist-item').forEach(el => el.classList.remove('active'));
+          document.getElementById(`check-${q.id}`).classList.add('active');
+
+          CredAI.chat.addAIMessage(text);
+          CredAI.speech.speak(text, () => {
+            CredAI.speech.listen((transcript) => {
+              CredAI.chat.addUserMessage(transcript);
+              CredAI.form.fillField(q.id, transcript);
+            });
+          });
+        },
+        next() {
+          CredAI.state.currentQuestionIndex++;
+          setTimeout(() => this.askCurrent(), 800);
+        },
+        repeat() {
+          if(CredAI.state.currentQuestionIndex >= 0 && CredAI.state.currentQuestionIndex < questionsData.length) {
+            CredAI.speech.stop();
+            this.askCurrent();
+          }
+        },
+        skip() {
+          if(CredAI.state.currentQuestionIndex >= 0 && CredAI.state.currentQuestionIndex < questionsData.length) {
+            CredAI.speech.stop();
+            const q = questionsData[CredAI.state.currentQuestionIndex];
+            CredAI.chat.addUserMessage("[Skipped]");
+            CredAI.form.fillField(q.id, "Skipped", true);
+          }
+        },
+        complete() {
+          CredAI.speech.stop();
+          document.getElementById('assistant-status').innerText = "Complete";
+          document.getElementById('bot-avatar').classList.remove('speaking');
+          CredAI.chat.addAIMessage("🎉 Application Complete! Thank you.");
+          
+          // Confetti
+          for(let i=0; i<50; i++) {
+            const conf = document.createElement('div');
+            conf.className = 'confetti';
+            conf.style.left = Math.random() * 100 + 'vw';
+            conf.style.backgroundColor = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'][Math.floor(Math.random()*5)];
+            conf.style.animationDuration = (Math.random() * 3 + 2) + 's';
+            document.body.appendChild(conf);
+          }
+        }
+      },
+
+      form: {
+        fillField(id, text, isSkip = false) {
+          const input = document.getElementById(`input-${id}`);
+          const group = document.getElementById(`group-${id}`);
+          const check = document.getElementById(`check-${id}`);
+          
+          // Basic normalizer
+          let val = text;
+          if(!isSkip) {
+            const lower = text.toLowerCase();
+            if(id === 'gender') {
+              if(lower.includes('male') || lower.includes('man') || lower.includes('purush') || lower.includes('gandu')) val = "Male";
+              if(lower.includes('female') || lower.includes('woman') || lower.includes('mahila') || lower.includes('hennu')) val = "Female";
+            }
+            if(id === 'existing_loans') {
+              if(lower.includes('yes') || lower.includes('haan') || lower.includes('ha') || lower.includes('houdu')) val = "Yes";
+              if(lower.includes('no') || lower.includes('nahi') || lower.includes('illa')) val = "No";
+            }
+            if(id === 'income' || id === 'loan_amount') {
+              const num = text.replace(/[^0-9]/g, '');
+              if(num) val = "₹ " + parseInt(num).toLocaleString('en-IN');
+              if(lower.includes('lakh')) val = "₹ " + (parseFloat(num.replace(/[^0-9.]/g,'')) * 100000).toLocaleString('en-IN');
+            }
+          }
+
+          // Typewriter animation
+          input.value = "";
+          let i = 0;
+          const typeWriter = setInterval(() => {
+            if(i < val.length) {
+              input.value += val.charAt(i);
+              i++;
+            } else {
+              clearInterval(typeWriter);
+              group.classList.remove('active');
+              group.classList.add('filled');
+              check.classList.remove('active');
+              check.classList.add('done');
+              check.innerText = `✓ ${questionsData.find(q=>q.id===id).label}`;
+              this.updateProgress();
+              CredAI.flow.next();
+            }
+          }, 40);
+        },
+        updateProgress() {
+          const filled = document.querySelectorAll('.checklist-item.done').length;
+          const pct = Math.round((filled / CredAI.state.totalFields) * 100);
+          document.getElementById('progress-bar').style.width = `${pct}%`;
+          document.getElementById('progress-text').innerText = `${pct}%`;
+        }
+      },
+
+      chat: {
+        addAIMessage(text) {
+          const body = document.getElementById('chat-body');
+          const div = document.createElement('div');
+          div.className = 'bubble ai';
+          div.innerText = text;
+          body.appendChild(div);
+          body.scrollTop = body.scrollHeight;
+        },
+        addUserMessage(text) {
+          const body = document.getElementById('chat-body');
+          const div = document.createElement('div');
+          div.className = 'bubble user';
+          div.innerText = text;
+          body.appendChild(div);
+          body.scrollTop = body.scrollHeight;
+        }
+      },
+
+      speech: {
+        synth: window.speechSynthesis,
+        recognition: null,
+        onEndCallback: null,
+
+        initRec() {
+          const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
+          if(!SpeechRec) return false;
+          this.recognition = new SpeechRec();
+          this.recognition.continuous = false;
+          this.recognition.interimResults = false; // keep it simple for auto-fill
+          
+          this.recognition.onstart = () => {
+            CredAI.state.isListening = true;
+            document.getElementById('mic-btn').classList.add('listening');
+            document.getElementById('assistant-status').innerText = "Listening...";
+          };
+          this.recognition.onresult = (e) => {
+            const transcript = e.results[0][0].transcript;
+            if(this.onEndCallback) this.onEndCallback(transcript);
+          };
+          this.recognition.onerror = (e) => {
+            console.warn("Speech Rec Error:", e.error);
+            if(e.error === 'no-speech') {
+              // retry
+              CredAI.flow.repeat();
+            }
+          };
+          this.recognition.onend = () => {
+            CredAI.state.isListening = false;
+            document.getElementById('mic-btn').classList.remove('listening');
+            document.getElementById('assistant-status').innerText = "Processing...";
+          };
+          return true;
+        },
+
+        speak(text, onComplete) {
+          this.stop();
+          CredAI.state.isSpeaking = true;
+          document.getElementById('bot-avatar').classList.add('speaking');
+          document.getElementById('assistant-status').innerText = "Speaking...";
+          
+          const utter = new SpeechSynthesisUtterance(text);
+          utter.lang = CredAI.state.langCode;
+          utter.rate = 0.9;
+          
+          // Try to find Indian voice
+          const voices = this.synth.getVoices();
+          let v = voices.find(v => v.lang === utter.lang);
+          if(!v) v = voices.find(v => v.lang.includes('en-IN') || v.lang.includes('hi'));
+          if(v) utter.voice = v;
+
+          utter.onend = () => {
+            CredAI.state.isSpeaking = false;
+            document.getElementById('bot-avatar').classList.remove('speaking');
+            if(onComplete) onComplete();
+          };
+          utter.onerror = () => {
+            CredAI.state.isSpeaking = false;
+            document.getElementById('bot-avatar').classList.remove('speaking');
+            if(onComplete) onComplete();
+          };
+
+          if(voices.length === 0) {
+            this.synth.addEventListener('voiceschanged', () => this.synth.speak(utter), {once:true});
+          } else {
+            this.synth.speak(utter);
+          }
+        },
+
+        listen(onResult) {
+          if(!this.recognition && !this.initRec()) {
+            CredAI.chat.addAIMessage("Speech recognition not supported in this browser. Please type or skip.");
+            return;
+          }
+          this.onEndCallback = onResult;
+          this.recognition.lang = CredAI.state.langCode;
+          try { this.recognition.start(); } catch(e){}
+        },
+
+        stop() {
+          this.synth.cancel();
+          if(this.recognition && CredAI.state.isListening) {
+            try{ this.recognition.stop(); } catch(e){}
+          }
+        },
+
+        toggleMic() {
+          if(CredAI.state.isListening) {
+            this.stop();
+          } else {
+            // manual start
+            if(!this.recognition) this.initRec();
+            this.recognition.start();
+          }
+        }
+      },
+
+      camera: {
+        async start() {
+          const video = document.getElementById('webcam');
+          try {
+            const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+            video.srcObject = stream;
+            document.getElementById('camera-status').innerHTML = '<span class="status-dot"></span> Camera: Active';
+            
+            // load face-api models
+            if(window.faceapi) {
+              await faceapi.nets.tinyFaceDetector.loadFromUri('https://raw.githubusercontent.com/justadudewhohacks/face-api.js/master/weights/');
+              await faceapi.nets.ageGenderNet.loadFromUri('https://raw.githubusercontent.com/justadudewhohacks/face-api.js/master/weights/');
+              this.detectFace(video);
+            }
+          } catch(err) {
+            console.warn("Camera access denied or missing");
+            document.getElementById('camera-status').innerHTML = '<span class="status-dot" style="background:var(--accent-red);box-shadow:0 0 8px var(--accent-red);"></span> Camera: Blocked';
+            document.getElementById('badge-face').className = 'badge red';
+            document.getElementById('badge-face').innerHTML = '<span class="status-dot" style="background:var(--accent-red);"></span> ✗ No Camera';
+          }
+        },
+        detectFace(video) {
+          const canvas = document.getElementById('face-canvas');
+          setInterval(async () => {
+            if(video.paused || video.ended) return;
+            const dims = faceapi.matchDimensions(canvas, video, true);
+            const detections = await faceapi.detectAllFaces(video, new faceapi.TinyFaceDetectorOptions()).withAgeAndGender();
+            const resized = faceapi.resizeResults(detections, dims);
+            
+            const badge = document.getElementById('badge-face');
+            const ageBadge = document.getElementById('badge-age');
+            
+            if(resized.length > 0) {
+              badge.className = 'badge green';
+              badge.innerHTML = '<span class="status-dot"></span> ✓ Face Detected';
+              ageBadge.innerText = `Age: ~${Math.round(resized[0].age)}`;
+            } else {
+              badge.className = 'badge red';
+              badge.innerHTML = '<span class="status-dot" style="background:var(--accent-red);"></span> ✗ No Face';
+              ageBadge.innerText = `Age: --`;
+            }
+          }, 1000);
+        }
+      },
+
+      waveform: {
+        init() {
+          setInterval(() => {
+            const bars = document.querySelectorAll('.wave-bar');
+            bars.forEach(bar => {
+              if(CredAI.state.isListening || CredAI.state.isSpeaking) {
+                bar.style.height = (Math.random() * 20 + 5) + 'px';
+                bar.style.backgroundColor = CredAI.state.isListening ? 'var(--accent-red)' : 'var(--accent-blue)';
+              } else {
+                bar.style.height = '4px';
+                bar.style.backgroundColor = 'var(--text-muted)';
+              }
+            });
+          }, 100);
+        }
+      }
+    };
+
+    window.onload = () => {
+      CredAI.init();
+    };
+  </script>
+</body>
+</html>

@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CredAI - AI-Powered Loan Onboarding</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="gradient-bg">
+        <div class="blob blob-1"></div>
+        <div class="blob blob-2"></div>
+        <div class="blob blob-3"></div>
+    </div>
+
+    <nav class="navbar">
+        <div class="container flex justify-between items-center">
+            <div class="logo flex items-center gap-1">
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--accent-blue)" stroke-width="2">
+                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                    <path d="M12 8v4l3 3"/>
+                </svg>
+                <span style="font-weight: 700; font-size: 1.5rem; letter-spacing: -0.5px;">Cred<span style="color: var(--accent-blue);">AI</span></span>
+            </div>
+            <div class="nav-links">
+                <a href="#how-it-works">How It Works</a>
+                <a href="#features">Features</a>
+                <a href="#tech">Technology</a>
+                <a href="dashboard.html">Dashboard</a>
+            </div>
+            <button class="mobile-toggle" style="display:none;">☰</button>
+        </div>
+    </nav>
+
+    <section class="hero-section" style="padding: 150px 0 100px;">
+        <div class="container grid grid-cols-2 gap-4 items-center">
+            <div class="hero-content fade-in">
+                <h1 style="margin-bottom: 24px;">AI-Powered Loan Onboarding in <span style="color: var(--accent-blue);">Minutes</span></h1>
+                <p style="font-size: 1.2rem; margin-bottom: 40px; max-width: 500px;">Skip the paperwork. Our AI verifies your identity, assesses your creditworthiness, and delivers instant loan offers — all through a simple video call.</p>
+                <div class="flex gap-2">
+                    <a href="credai-voice-kyc.html" class="btn btn-primary">Start Video KYC</a>
+                    <a href="#demo" class="btn btn-secondary">View Demo</a>
+                </div>
+                <div class="flex gap-4" style="margin-top: 48px;">
+                    <div><h3 class="counter" data-target="98.7" data-suffix="%">0%</h3><p style="font-size: 0.8rem;">Accuracy</p></div>
+                    <div><h3 class="counter" data-target="3" data-suffix=" Min">0</h3><p style="font-size: 0.8rem;">Onboarding</p></div>
+                    <div><h3>Zero</h3><p style="font-size: 0.8rem;">Paperwork</p></div>
+                </div>
+            </div>
+            <div class="hero-visual fade-in" style="animation-delay: 0.3s; position: relative;">
+                <div class="glass-card flex-col items-center justify-center" style="height: 500px; width: 300px; border-radius: 40px; margin: 0 auto; position: relative; overflow: hidden; border: 8px solid #1a233a;">
+                    <div style="position: absolute; top: 10px; width: 40%; height: 20px; background: #0a0f1e; border-radius: 10px; z-index: 10;"></div>
+                    <img src="https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=600" alt="Video Call" style="width: 100%; height: 100%; object-fit: cover; opacity: 0.8;">
+                    <div style="position: absolute; bottom: 20px; background: rgba(0,0,0,0.6); padding: 10px 20px; border-radius: 20px; backdrop-filter: blur(10px);">
+                        <span style="color: var(--accent-teal);">🟢 Scanning Face... 99%</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="how-it-works" style="padding: 100px 0;">
+        <div class="container">
+            <h2 class="text-center fade-in" style="margin-bottom: 60px;">How CredAI Works</h2>
+            <div class="flex flex-col-md gap-4 justify-center fade-in text-center">
+                <div style="flex: 1;">
+                    <div style="font-size: 3rem; margin-bottom: 16px;">📱</div>
+                    <h4>1. Secure Link</h4>
+                    <p style="font-size: 0.9rem;">Get your secure link</p>
+                </div>
+                <div style="flex: 1;">
+                    <div style="font-size: 3rem; margin-bottom: 16px;">🎥</div>
+                    <h4>2. Video KYC</h4>
+                    <p style="font-size: 0.9rem;">Join video onboarding</p>
+                </div>
+                <div style="flex: 1;">
+                    <div style="font-size: 3rem; margin-bottom: 16px;">🤖</div>
+                    <h4>3. AI Verify</h4>
+                    <p style="font-size: 0.9rem;">AI verifies identity</p>
+                </div>
+                <div style="flex: 1;">
+                    <div style="font-size: 3rem; margin-bottom: 16px;">📊</div>
+                    <h4>4. Risk Engine</h4>
+                    <p style="font-size: 0.9rem;">Risk score generated</p>
+                </div>
+                <div style="flex: 1;">
+                    <div style="font-size: 3rem; margin-bottom: 16px;">✅</div>
+                    <h4>5. Loan Offer</h4>
+                    <p style="font-size: 0.9rem;">Instant loan offer</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="features" style="padding: 100px 0; background: rgba(0,0,0,0.2);">
+        <div class="container">
+            <h2 class="text-center fade-in" style="margin-bottom: 60px;">Powered by Advanced AI</h2>
+            <div class="grid grid-cols-3 gap-4">
+                <div class="glass-card fade-in">
+                    <h3 style="margin-bottom: 16px;">🎭 Face Recognition</h3>
+                    <p>Facenet model with 99.2% accuracy. Real-time matching against ID.</p>
+                </div>
+                <div class="glass-card fade-in" style="animation-delay: 0.1s;">
+                    <h3 style="margin-bottom: 16px;">🔍 Liveness Detection</h3>
+                    <p>Prevents photo/video spoofing using dynamic motion checks.</p>
+                </div>
+                <div class="glass-card fade-in" style="animation-delay: 0.2s;">
+                    <h3 style="margin-bottom: 16px;">📄 Document OCR</h3>
+                    <p>Instant PAN & Aadhaar reading directly from the video feed.</p>
+                </div>
+                <div class="glass-card fade-in" style="animation-delay: 0.3s;">
+                    <h3 style="margin-bottom: 16px;">🎤 Voice Analysis</h3>
+                    <p>Sentiment and confidence scoring mapped to fraud rules.</p>
+                </div>
+                <div class="glass-card fade-in" style="animation-delay: 0.4s;">
+                    <h3 style="margin-bottom: 16px;">🛡️ Fraud Detection</h3>
+                    <p>Real-time multi-signal rule engine flagging 10+ risk factors.</p>
+                </div>
+                <div class="glass-card fade-in" style="animation-delay: 0.5s;">
+                    <h3 style="margin-bottom: 16px;">📈 Risk Scoring</h3>
+                    <p>LightGBM trained on 300K+ records for precise default probability.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="tech" style="padding: 100px 0;">
+        <div class="container text-center fade-in">
+            <h2 style="margin-bottom: 40px;">Technology Stack</h2>
+            <div class="flex justify-center gap-4 flex-wrap" style="opacity: 0.7;">
+                <span style="font-size: 1.5rem; font-weight: 600;">Python</span>
+                <span style="font-size: 1.5rem; font-weight: 600;">FastAPI</span>
+                <span style="font-size: 1.5rem; font-weight: 600;">LightGBM</span>
+                <span style="font-size: 1.5rem; font-weight: 600;">DeepFace</span>
+                <span style="font-size: 1.5rem; font-weight: 600;">OpenCV</span>
+            </div>
+        </div>
+    </section>
+
+    <footer style="padding: 40px 0; border-top: 1px solid var(--border-color); margin-top: 50px;">
+        <div class="container text-center">
+            <h3 style="color: var(--text-primary); margin-bottom: 10px;">CredAI</h3>
+            <p style="margin-bottom: 10px;">Built for Vibethon 2026 @ NMIT Bengaluru</p>
+            <p style="font-size: 0.8rem;">&copy; 2026 CredAI Team. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <script src="js/api.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>
