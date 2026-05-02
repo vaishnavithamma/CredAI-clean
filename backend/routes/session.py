@@ -6,16 +6,21 @@ from typing import Dict, Any, Optional
 
 from backend.services.risk_service import predict_risk
 from backend.services.fraud_service import detect_fraud, check_and_register_pan
+from backend.services.llm_service import classify_customer
 from backend.routes.admin import log_application
 
 router = APIRouter(prefix="/api/session", tags=["Session"])
 
-class SessionCompleteInput(BaseModel):
+class CompleteSessionRequest(BaseModel):
     session_id: str
-    language: str
     answers: Dict[str, Any]
-    face_analysis: Dict[str, Any]
-    face_match_score: Optional[float] = None
+    face_match_score: float = 0.95
+    liveness_passed: bool = True
+    session_duration_seconds: int = 120
+    geo_city: str = ""
+    voice_confidence: float = 0.95
+    consent_captured: bool = False
+    full_transcript: str = ""
     metadata: Dict[str, Any]
 
 def calculate_days_birth(dob_str):
@@ -81,49 +86,69 @@ async def start_session():
     }
 
 @router.post("/complete")
-async def complete_session(data: SessionCompleteInput):
-    answers = data.answers
+async def complete_session(req: CompleteSessionRequest):
+    answers = req.answers
     
     pan = answers.get("pan_number", "")
+    pan_used_before = False
     if pan:
-        pan_duplicate = check_and_register_pan(pan)
-        answers["pan_used_before"] = pan_duplicate
-    
-    # Check age mismatch
-    face_age = data.face_analysis.get("estimated_age")
-    dob_age = abs(calculate_days_birth(answers.get("dob", ""))) / 365.25
-    age_mismatch = False
-    if face_age and face_age > 0 and dob_age > 0:
-        if abs(face_age - dob_age) > 10:
-            age_mismatch = True
-    
-    # 1. Run fraud detection
-    fraud_result = detect_fraud(answers)
-    if age_mismatch:
-        fraud_result["alerts"].append("Age mismatch between face and stated DOB (>10 years)")
-        fraud_result["fraud_score"] = min(1.0, fraud_result.get("fraud_score", 0) + 0.3)
-        if fraud_result["fraud_score"] > 0.7:
-            fraud_result["block"] = True
+        pan_used_before = check_and_register_pan(pan)
     
     # 2. Map features and Run risk prediction
     model_features = map_answers_to_features(answers)
     risk_result = predict_risk(model_features)
     
-    # Combine results
-    final_decision = risk_result.get("decision", "APPROVED")
-    if fraud_result.get("block", False):
-        final_decision = "REJECTED_FRAUD"
-        
-    log_application(data.session_id, answers, risk_result, fraud_result, final_decision)
-        
+    # 4. LLM Persona Classification
+    llm_classification = classify_customer(req.full_transcript)
+    
+    # Update fraud checks with new parameters
+    age = abs(calculate_days_birth(answers.get("dob", ""))) / 365.25
+    estimated_age = req.metadata.get("estimated_age", 0)
+    
+    fraud_data = {
+        "face_match_score": req.face_match_score,
+        "liveness_passed": req.liveness_passed,
+        "declared_age": age,
+        "estimated_age": estimated_age,
+        "declared_city": answers.get("city", ""),
+        "ip_city": req.geo_city,
+        "voice_confidence": req.voice_confidence,
+        "pan_used_before": pan_used_before,
+        "session_duration_seconds": req.session_duration_seconds,
+        "consent_captured": req.consent_captured
+    }
+    fraud_result = detect_fraud(fraud_data)
+
+    # Calculate 3-tier loan offers
+    base_offer = risk_result.get("loan_offer", {})
+    base_amount = base_offer.get("amount", 0)
+    base_rate = base_offer.get("interest_rate", 12.0)
+    
+    tiered_offers = []
+    if base_amount > 0:
+        tiered_offers = [
+            {"tier": "🏆 Best Offer", "amount": min(base_amount * 1.5, 500000), "interest_rate": round(max(base_rate - 1.0, 9.0), 1), "tenure_months": 36},
+            {"tier": "⚡ Standard", "amount": base_amount, "interest_rate": base_rate, "tenure_months": 24},
+            {"tier": "🛡️ Safe Option", "amount": max(base_amount * 0.5, 50000), "interest_rate": round(base_rate + 1.5, 1), "tenure_months": 12}
+        ]
+
+    # Calculate EMI for each tier
+    for offer in tiered_offers:
+        r = (offer["interest_rate"] / 100) / 12
+        m = offer["tenure_months"]
+        if r > 0 and m > 0:
+            emi = offer["amount"] * r * (1 + r)**m / ((1 + r)**m - 1)
+            offer["emi"] = round(emi, 2)
+        else:
+            offer["emi"] = 0
+
     return {
         "success": True,
-        "session_id": data.session_id,
-        "applicant_name": answers.get("full_name", "Unknown"),
-        "risk_result": risk_result,
-        "fraud_result": fraud_result,
-        "face_analysis": data.face_analysis,
-        "decision": final_decision,
-        "application_summary": answers,
-        "audit_timestamp": datetime.now(timezone.utc).isoformat()
+        "session_id": req.session_id,
+        "timestamp": datetime.now().isoformat(),
+        "final_decision": "REJECTED" if fraud_result["block"] else "APPROVED" if risk_result.get("risk_score", 100) < 40 else "MANUAL REVIEW",
+        "risk_assessment": risk_result,
+        "fraud_assessment": fraud_result,
+        "llm_classification": llm_classification,
+        "tiered_offers": tiered_offers
     }

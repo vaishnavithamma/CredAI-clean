@@ -29,43 +29,43 @@ def detect_fraud(data: dict) -> dict:
     # Face match rules (mutually exclusive ranges based on lowest threshold)
     if face_match_score < 0.40:
         fraud_score += 40
-        alerts.append({"rule": "Face Match Critical", "severity": "CRITICAL"})
+        alerts.append({"rule": "Face Match Critical", "severity": "CRITICAL", "desc": f"Face match confidence is critically low ({int(face_match_score*100)}%). Identity verification failed."})
     elif face_match_score < 0.65:
         fraud_score += 20
-        alerts.append({"rule": "Face Match Warning", "severity": "WARNING"})
+        alerts.append({"rule": "Face Match Warning", "severity": "WARNING", "desc": f"Face match confidence is borderline ({int(face_match_score*100)}%)."})
 
     if not liveness_passed:
         fraud_score += 45
-        alerts.append({"rule": "Liveness Failed", "severity": "CRITICAL"})
+        alerts.append({"rule": "Liveness Failed", "severity": "CRITICAL", "desc": "Motion/Blink liveness check failed. Possible photo spoofing detected."})
 
     # Age mismatch rules
     age_gap = abs(declared_age - estimated_age)
     if age_gap > 10:
         fraud_score += 30
-        alerts.append({"rule": "Age Mismatch > 10", "severity": "HIGH"})
+        alerts.append({"rule": "Age Mismatch > 10", "severity": "HIGH", "desc": f"Declared age ({declared_age}) differs significantly from face analysis ({estimated_age})."})
     elif age_gap > 6:
         fraud_score += 15
-        alerts.append({"rule": "Age Mismatch > 6", "severity": "MEDIUM"})
+        alerts.append({"rule": "Age Mismatch > 6", "severity": "MEDIUM", "desc": f"Declared age ({declared_age}) slightly mismatches face analysis ({estimated_age})."})
 
     if declared_city and ip_city and declared_city != ip_city:
         fraud_score += 20
-        alerts.append({"rule": "Location Mismatch", "severity": "HIGH"})
+        alerts.append({"rule": "Location Mismatch", "severity": "HIGH", "desc": f"GPS City ({ip_city}) does not match declared city ({declared_city})."})
 
     if voice_confidence < 0.35:
         fraud_score += 15
-        alerts.append({"rule": "Low Voice Confidence", "severity": "MEDIUM"})
+        alerts.append({"rule": "Low Voice Confidence", "severity": "MEDIUM", "desc": "Speech variance was unnaturally flat or robotic."})
 
     if pan_used_before:
         fraud_score += 50
-        alerts.append({"rule": "Duplicate PAN", "severity": "CRITICAL"})
+        alerts.append({"rule": "Duplicate PAN", "severity": "CRITICAL", "desc": "The uploaded PAN card has been used in previous suspicious applications."})
 
     if session_duration_seconds < 30:
         fraud_score += 20
-        alerts.append({"rule": "Speed Run detected (< 30s)", "severity": "HIGH"})
+        alerts.append({"rule": "Speed Run detected (< 30s)", "severity": "HIGH", "desc": "Application completed unnaturally fast. Possible automated script."})
 
     if not consent_captured:
         fraud_score += 25
-        alerts.append({"rule": "Missing Consent", "severity": "HIGH"})
+        alerts.append({"rule": "Missing Consent", "severity": "HIGH", "desc": "Explicit verbal consent was not recorded."})
 
     fraud_score = min(fraud_score, 100)
 
@@ -81,10 +81,31 @@ def detect_fraud(data: dict) -> dict:
 
     block = fraud_score >= 60
 
+    # Generate Explainable AI Decisions
+    explanation = {
+        "positives": [],
+        "warnings": []
+    }
+    
+    if face_match_score >= 0.8:
+        explanation["positives"].append(f"Face match confidence is excellent ({int(face_match_score*100)}%) — identity securely verified.")
+    if liveness_passed:
+        explanation["positives"].append("Liveness verification passed successfully.")
+    if age_gap <= 6:
+        explanation["positives"].append(f"Declared age ({declared_age}) is consistent with visual analysis.")
+    if declared_city and ip_city and declared_city == ip_city:
+        explanation["positives"].append(f"Geo-location securely confirmed: {ip_city.title()}.")
+    if consent_captured:
+        explanation["positives"].append("Explicit verbal consent captured and timestamped.")
+        
+    for alert in alerts:
+        explanation["warnings"].append(alert.get("desc", alert["rule"]))
+
     return {
         "success": True,
         "fraud_score": fraud_score,
         "fraud_level": fraud_level,
         "block": block,
-        "alerts": alerts
+        "alerts": alerts,
+        "explanation": explanation
     }

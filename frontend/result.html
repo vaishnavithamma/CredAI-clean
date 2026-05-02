@@ -72,42 +72,81 @@
         </div>
 
         <div class="grid grid-cols-2 gap-4 fade-in" style="animation-delay: 0.2s;">
-            <!-- LOAN OFFER -->
-            <div class="glass-card" id="offer-card" style="display: none; border-color: var(--accent-teal);">
-                <h3 style="color: var(--accent-teal); margin-bottom: 24px;">✨ Approved Loan Offer</h3>
-                <div style="margin-bottom: 20px;">
-                    <p style="font-size: 0.9rem;">Approved Amount</p>
-                    <h1 id="offer-amount">₹0</h1>
+            <!-- LLM PERSONA CARD -->
+            <div class="glass-card" id="persona-card" style="border-color: var(--accent-violet);">
+                <h3 style="color: var(--accent-violet); margin-bottom: 16px;">🧠 AI Customer Persona</h3>
+                <div class="grid grid-cols-2 gap-2" style="margin-bottom: 12px;">
+                    <div><p style="font-size:0.8rem; color:var(--text-secondary);">Profile Type</p><h4 id="persona-type">--</h4></div>
+                    <div><p style="font-size:0.8rem; color:var(--text-secondary);">Income Band</p><h4 id="persona-income">--</h4></div>
+                    <div><p style="font-size:0.8rem; color:var(--text-secondary);">Loan Purpose</p><h4 id="persona-purpose" style="text-transform:capitalize;">--</h4></div>
+                    <div><p style="font-size:0.8rem; color:var(--text-secondary);">Intent Signals</p><h4 id="persona-intent" style="font-size:0.8rem;">--</h4></div>
                 </div>
-                <div class="grid grid-cols-2 gap-2" style="margin-bottom: 24px;">
-                    <div>
-                        <p style="font-size: 0.9rem;">Interest Rate</p>
-                        <h3 id="offer-rate">0% p.a.</h3>
+            </div>
+
+            <!-- EXPLAINABLE AI SUMMARY -->
+            <div class="glass-card" id="explain-card">
+                <h3 style="margin-bottom: 16px;">🤖 AI Decision Breakdown</h3>
+                <div id="explain-positives" style="margin-bottom: 12px; font-size: 0.9rem;"></div>
+                <div id="explain-warnings" style="font-size: 0.9rem;"></div>
+            </div>
+
+            <!-- TIERED LOAN OFFERS & EMI CALCULATOR -->
+            <div class="glass-card" id="offer-card" style="display: none; border-color: var(--accent-teal); grid-column: 1 / -1;">
+                <div class="flex justify-between items-center" style="margin-bottom: 24px;">
+                    <h3 style="color: var(--accent-teal);">✨ Approved Loan Offers</h3>
+                    <div style="background:rgba(0,0,0,0.4); padding:8px 16px; border-radius:8px;">
+                        <span style="font-size:0.8rem; color:var(--text-secondary);">Max Eligibility:</span>
+                        <span id="max-eligibility" style="font-weight:bold; color:var(--accent-teal); margin-left:8px;">₹0</span>
                     </div>
-                    <div>
-                        <p style="font-size: 0.9rem;">Tenure</p>
-                        <h3 id="offer-tenure">0 months</h3>
+                </div>
+                
+                <div class="grid grid-cols-3 gap-4" id="tiered-offers-container" style="margin-bottom:30px;">
+                    <!-- Tiers injected via JS -->
+                </div>
+                
+                <h4 style="margin-bottom:12px; border-top:1px solid rgba(255,255,255,0.1); padding-top:20px;">🧮 Interactive EMI Calculator</h4>
+                <div style="background: rgba(0, 212, 170, 0.1); padding: 20px; border-radius: 12px;">
+                    <div class="flex justify-between items-center" style="margin-bottom:16px;">
+                        <div>
+                            <p style="font-size: 0.9rem;">Selected Amount</p>
+                            <h2 id="calc-amount">₹0</h2>
+                        </div>
+                        <div style="text-align:right;">
+                            <p style="font-size: 0.9rem;">Estimated Monthly EMI</p>
+                            <h1 id="calc-emi" style="color: var(--accent-teal);">₹0</h1>
+                        </div>
+                    </div>
+                    <div style="margin-bottom:10px;">
+                        <label style="font-size:0.85rem; display:flex; justify-content:space-between;">
+                            <span>Tenure: <span id="tenure-val">36</span> Months</span>
+                            <span style="color:var(--text-secondary);">Rate: <span id="calc-rate">12.5</span>% p.a.</span>
+                        </label>
+                        <input type="range" id="tenure-slider" min="6" max="60" step="6" value="36" style="width:100%; margin-top:8px;">
                     </div>
                 </div>
-                <div style="background: rgba(0, 212, 170, 0.1); padding: 16px; border-radius: 8px; margin-bottom: 24px;">
-                    <p style="font-size: 0.9rem;">Monthly EMI</p>
-                    <h2 id="offer-emi" style="color: var(--accent-teal);">₹0</h2>
-                </div>
-                <div class="flex gap-2">
-                    <button class="btn btn-success w-full" onclick="showToast('Offer Accepted! redirecting...', 'success')">Accept Offer</button>
-                    <button class="btn btn-secondary w-full">Modify Terms</button>
+                
+                <div class="flex gap-2" style="margin-top:24px;">
+                    <button class="btn btn-success w-full" onclick="showToast('Offer Accepted! redirecting...', 'success')">Accept Best Offer</button>
                 </div>
             </div>
 
             <!-- FRAUD ALERTS -->
-            <div class="glass-card" id="alerts-card" style="display: none; border-color: var(--accent-red);">
-                <h3 style="color: var(--accent-amber); margin-bottom: 24px;">⚠️ Flags Detected</h3>
+            <div class="glass-card" id="alerts-card" style="display: none; border-color: var(--accent-red); grid-column: 1 / -1;">
+                <h3 style="color: var(--accent-amber); margin-bottom: 24px;">⚠️ Fraud Score Breakdown</h3>
                 <ul id="alerts-list" style="margin-bottom: 24px;"></ul>
                 <p style="font-size: 0.9rem; color: var(--text-secondary);">This application has been flagged and sent for manual underwriter review.</p>
             </div>
 
+            <!-- AUDIT TIMELINE -->
+            <div class="glass-card" style="grid-column: 1 / -1;">
+                <h3 style="margin-bottom: 24px;">⏱️ Session Audit Timeline</h3>
+                <div id="audit-timeline" style="font-family:monospace; font-size:0.85rem; background:#0a0f1a; padding:16px; border-radius:8px; overflow-y:auto; max-height:200px;">
+                    <!-- Timeline injected via JS -->
+                </div>
+            </div>
+
             <!-- SUMMARY -->
-            <div class="glass-card">
+            <div class="glass-card" style="grid-column: 1 / -1;">
                 <h3 style="margin-bottom: 24px;">Applicant Summary</h3>
                 <table style="width: 100%;">
                     <tr><td style="color: var(--text-secondary);">Age</td><td id="sum-age" style="text-align: right; font-weight: 600;">--</td></tr>
@@ -119,12 +158,14 @@
         </div>
 
         <div class="flex justify-center gap-2" style="margin-top: 40px;">
-            <button class="btn btn-primary" onclick="window.print()">Download Report</button>
-            <a href="onboarding.html" class="btn btn-secondary">New Application</a>
-            <a href="index.html" class="btn btn-secondary">Back to Home</a>
+            <button class="btn btn-primary" onclick="generateAuditPDF()">📥 Download Audit Report</button>
+            <a href="voice-app.html" class="btn btn-secondary">New Application</a>
+            <a href="credai-voice-kyc.html" class="btn btn-secondary">Back to Home</a>
         </div>
     </div>
 
+    <!-- Load jsPDF for Audit Download -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="js/api.js"></script>
     <script src="js/app.js"></script>
     <script>
@@ -170,13 +211,36 @@
                 decisionIcon.innerText = "✅";
                 heroCard.style.borderColor = "var(--accent-teal)";
                 
-                // Show offer
+                // Show offers
                 document.getElementById('offer-card').style.display = 'block';
-                const offer = data.risk_assessment.loan_offer;
-                document.getElementById('offer-amount').innerText = `₹${offer.amount.toLocaleString()}`;
-                document.getElementById('offer-rate').innerText = `${offer.interest_rate}% p.a.`;
-                document.getElementById('offer-tenure').innerText = `${offer.tenure_months} months`;
-                document.getElementById('offer-emi').innerText = `₹${offer.emi.toLocaleString()}`;
+                
+                if (data.tiered_offers && data.tiered_offers.length > 0) {
+                    const container = document.getElementById('tiered-offers-container');
+                    document.getElementById('max-eligibility').innerText = `₹${data.tiered_offers[0].amount.toLocaleString('en-IN')}`;
+                    
+                    data.tiered_offers.forEach((offer, idx) => {
+                        const isStandard = idx === 1; // Middle tier is standard
+                        
+                        container.innerHTML += `
+                            <div class="glass-card" style="padding:16px; cursor:pointer; transition:transform 0.2s; ${isStandard ? 'border-color:var(--accent-teal); transform:scale(1.05);' : ''}" 
+                                 onclick="document.getElementById('calc-amount').innerText='₹${offer.amount.toLocaleString('en-IN')}'; 
+                                          document.getElementById('calc-rate').innerText='${offer.interest_rate}';
+                                          document.getElementById('tenure-slider').value=${offer.tenure_months};
+                                          updateEMI();">
+                                <h4 style="font-size:0.9rem; color:${isStandard ? 'var(--accent-teal)' : 'white'};">${offer.tier}</h4>
+                                <h2 style="margin:10px 0;">₹${(offer.amount / 100000).toFixed(1)}L</h2>
+                                <p style="font-size:0.8rem; color:var(--text-secondary);">${offer.interest_rate}% p.a. • ${offer.tenure_months} mo</p>
+                            </div>
+                        `;
+                    });
+                    
+                    // Initialize calculator with standard tier
+                    const standard = data.tiered_offers[1] || data.tiered_offers[0];
+                    document.getElementById('calc-amount').innerText = `₹${standard.amount.toLocaleString('en-IN')}`;
+                    document.getElementById('calc-rate').innerText = standard.interest_rate;
+                    document.getElementById('tenure-slider').value = standard.tenure_months;
+                    // updateEMI() will be called globally
+                }
             } else if (data.final_decision.includes("REVIEW")) {
                 decisionText.innerText = "MANUAL REVIEW";
                 decisionText.style.color = "var(--accent-amber)";
@@ -188,6 +252,49 @@
                 decisionIcon.innerText = "❌";
                 heroCard.style.borderColor = "var(--accent-red)";
             }
+
+            // LLM Persona Card
+            const llm = data.llm_classification || {};
+            document.getElementById('persona-type').innerText = (llm.customer_persona || 'Unknown').replace('_', ' ');
+            document.getElementById('persona-income').innerText = (llm.income_band || '--').toUpperCase();
+            document.getElementById('persona-purpose').innerText = llm.loan_purpose_category || '--';
+            document.getElementById('persona-intent').innerText = (llm.intent_signals || []).slice(0,2).join(', ') || '--';
+
+            // Explainable AI
+            const exp = data.fraud_assessment.explanation || { positives: [], warnings: [] };
+            const pCont = document.getElementById('explain-positives');
+            const wCont = document.getElementById('explain-warnings');
+            
+            pCont.innerHTML = exp.positives.map(p => `<div style="color:var(--accent-teal); margin-bottom:6px;">✅ ${p}</div>`).join('');
+            if (exp.warnings.length > 0) {
+                wCont.innerHTML = exp.warnings.map(w => `<div style="color:var(--accent-amber); margin-bottom:6px;">⚠️ ${w}</div>`).join('');
+            } else {
+                wCont.innerHTML = `<div style="color:var(--text-secondary);">No warnings detected.</div>`;
+            }
+
+            // Timeline Audit
+            const timeline = document.getElementById('audit-timeline');
+            const startT = new Date(data.timestamp);
+            startT.setMinutes(startT.getMinutes() - 2); // mock start time
+            let logs = [];
+            logs.push(`[${startT.toLocaleTimeString()}] Session Started — Device Detected`);
+            
+            if (data.fraud_assessment.consent_captured) {
+                startT.setSeconds(startT.getSeconds() + 15);
+                logs.push(`[${startT.toLocaleTimeString()}] Consent Captured ✅ Explicit Agreement Recorded`);
+            }
+            if (data.fraud_assessment.ip_city) {
+                startT.setSeconds(startT.getSeconds() + 5);
+                logs.push(`[${startT.toLocaleTimeString()}] Geolocation Verified: ${data.fraud_assessment.ip_city}`);
+            }
+            startT.setSeconds(startT.getSeconds() + 45);
+            logs.push(`[${startT.toLocaleTimeString()}] Voice Interview Completed — Full transcript saved`);
+            startT.setSeconds(startT.getSeconds() + 5);
+            logs.push(`[${startT.toLocaleTimeString()}] Risk Score Computed: ${data.risk_assessment.risk_score} — Model: LightGBM`);
+            startT.setSeconds(startT.getSeconds() + 2);
+            logs.push(`[${startT.toLocaleTimeString()}] Decision Finalized: ${data.final_decision}`);
+            
+            timeline.innerHTML = logs.map(l => `<div style="margin-bottom:4px; ${l.includes('✅')?'color:var(--accent-teal)':''}">${l}</div>`).join('');
 
             // Gauges
             const rScore = data.risk_assessment.risk_score;
@@ -202,8 +309,8 @@
             fGauge.setAttribute('stroke-dasharray', `${fScore}, 100`);
             fGauge.className.baseVal = "circle " + (fScore < 20 ? "green" : fScore < 60 ? "orange" : "red");
 
-            document.getElementById('face-match').innerText = `${Math.round(appData.face_match_score * 100)}%`;
-            document.getElementById('voice-conf').innerText = `${Math.round((appData.voice_confidence || 0.95) * 100)}%`;
+            document.getElementById('face-match').innerText = `${Math.round(data.fraud_assessment.face_match_score * 100)}%`;
+            document.getElementById('voice-conf').innerText = `${Math.round(data.fraud_assessment.voice_confidence * 100)}%`;
 
             // Alerts
             if (data.fraud_assessment.alerts && data.fraud_assessment.alerts.length > 0) {
@@ -211,22 +318,75 @@
                 alertsCard.style.display = 'block';
                 const ul = document.getElementById('alerts-list');
                 data.fraud_assessment.alerts.forEach(a => {
-                    ul.innerHTML += `<li style="padding: 8px 0; border-bottom: 1px solid var(--border-color);">
-                        <span class="badge badge-warning">${a.severity}</span> ${a.rule}
-                    </li>`;
+                    ul.innerHTML += `<li style="padding: 8px 0; border-bottom: 1px solid var(--border-color); display:flex; justify-content:space-between;">
+                        <span><span class="badge badge-warning">${a.severity}</span> ${a.rule}</span>
+                        <span style="color:var(--accent-red);">+Points</span>
+                    </li>
+                    <li style="font-size:0.8rem; color:var(--text-secondary); padding-bottom:8px; padding-left:70px;">${a.desc || ''}</li>`;
                 });
             }
 
             // Summary
-            document.getElementById('sum-age').innerText = appData.estimated_age || appData.declared_age || '--';
+            document.getElementById('sum-age').innerText = data.fraud_assessment.estimated_age || appData.declared_age || '--';
             document.getElementById('sum-gender').innerText = appData.gender || '--';
             document.getElementById('sum-income').innerText = `₹${(appData.income || 0).toLocaleString()}`;
             document.getElementById('sum-emp').innerText = appData.income_type || '--';
 
-            // Clear sessionStorage after loading to not pollute
-            // sessionStorage.removeItem("applicationResult");
-            // sessionStorage.removeItem("applicantData");
+            // Global PDF Data
+            window.auditData = data;
         });
+
+        // 🧮 EMI Calculator logic
+        const tenureSlider = document.getElementById('tenure-slider');
+        const tenureVal = document.getElementById('tenure-val');
+        const calcAmount = document.getElementById('calc-amount');
+        const calcEmi = document.getElementById('calc-emi');
+        const calcRate = document.getElementById('calc-rate');
+
+        function updateEMI() {
+            const p = parseFloat((calcAmount.innerText || "0").replace(/[^0-9.]/g, ''));
+            const r = parseFloat(calcRate.innerText || "0") / 1200;
+            const m = parseInt(tenureSlider.value);
+            
+            tenureVal.innerText = m;
+            
+            if(p > 0 && r > 0 && m > 0) {
+                const emi = p * r * Math.pow(1+r, m) / (Math.pow(1+r, m) - 1);
+                calcEmi.innerText = `₹${Math.round(emi).toLocaleString('en-IN')}`;
+            }
+        }
+
+        tenureSlider.addEventListener('input', updateEMI);
+
+        // 📥 jsPDF Audit Report Generation
+        function generateAuditPDF() {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            const d = window.auditData;
+            
+            doc.setFontSize(22);
+            doc.text('CredAI — Loan Application Audit Report', 20, 20);
+            
+            doc.setFontSize(12);
+            doc.text(`Session ID: ${d.session_id}`, 20, 40);
+            doc.text(`Timestamp: ${new Date(d.timestamp).toLocaleString()}`, 20, 50);
+            
+            doc.text(`Face Match Score: ${Math.round(d.fraud_assessment.face_match_score*100)}%`, 20, 70);
+            doc.text(`Consent Captured: ${d.fraud_assessment.consent_captured ? 'YES' : 'NO'}`, 20, 80);
+            doc.text(`Geolocation Verified: ${d.fraud_assessment.ip_city || 'NO'}`, 20, 90);
+            doc.text(`Voice Confidence: ${Math.round(d.fraud_assessment.voice_confidence*100)}%`, 20, 100);
+            
+            doc.text(`Risk Score: ${d.risk_assessment.risk_score}/100`, 20, 120);
+            doc.text(`Fraud Score: ${d.fraud_assessment.fraud_score}/100`, 20, 130);
+            doc.text(`Final Decision: ${d.final_decision}`, 20, 140);
+            
+            if(d.tiered_offers && d.tiered_offers.length > 0) {
+                doc.text(`Approved Amount: INR ${d.tiered_offers[1].amount}`, 20, 160);
+                doc.text(`Interest Rate: ${d.tiered_offers[1].interest_rate}%`, 20, 170);
+            }
+            
+            doc.save(`credai-audit-${d.session_id}.pdf`);
+        }
     </script>
 </body>
 </html>

@@ -1,0 +1,941 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CredAI - AI Voice eKYC Assistant</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api/dist/face-api.js"></script>
+
+  <style>
+    :root {
+      --bg-deep:    #080b12;
+      --bg-base:    #0d1117;
+      --bg-card:    #141a24;
+      --bg-raised:  #1a2232;
+      --border:     rgba(255,255,255,0.07);
+      --border-glow:rgba(59,130,246,0.4);
+      --blue:       #3b82f6;
+      --cyan:       #06b6d4;
+      --green:      #10b981;
+      --red:        #ef4444;
+      --gold:       #f59e0b;
+      --purple:     #8b5cf6;
+      --text:       #f1f5f9;
+      --muted:      #64748b;
+      --faint:      #1e2a3a;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; }
+
+    body {
+      background-color: var(--bg-deep);
+      color: var(--text);
+      overflow-x: hidden;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    @media print {
+      body { background: white; color: black; display: block; overflow: auto; min-height: auto; }
+      body::before { display: none; }
+      header, .left-panel, .right-panel, footer, #btn-main-action, .video-card { display: none !important; }
+      .center-panel { width: 100%; max-width: 100%; margin: 0; padding: 0; display: block; overflow: visible; animation: none; }
+      .card { background: none; border: none; padding: 0; box-shadow: none; margin-bottom: 20px; }
+      .form-input { border: none !important; background: none !important; border-bottom: 1px solid #ccc !important; color: black !important; padding-left: 0; border-radius: 0; box-shadow: none !important; }
+      .form-label { color: #555 !important; font-weight: bold; }
+      .result-card { border: 1px solid #000 !important; background: none !important; margin-top: 20px; }
+      * { animation: none !important; }
+      .card-title { color: black !important; border-bottom: 2px solid black; padding-bottom: 5px; }
+    }
+
+    /* Full page gradient mesh background */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background: 
+        radial-gradient(ellipse 80% 50% at 20% 20%, rgba(59,130,246,0.06) 0%, transparent 60%),
+        radial-gradient(ellipse 60% 40% at 80% 80%, rgba(6,182,212,0.05) 0%, transparent 60%),
+        radial-gradient(ellipse 50% 60% at 50% 50%, rgba(139,92,246,0.03) 0%, transparent 70%);
+      pointer-events: none;
+      z-index: 0;
+      animation: meshFloat 15s ease-in-out infinite alternate;
+    }
+
+    @keyframes meshFloat {
+      0% { transform: scale(1) rotate(0deg); }
+      100% { transform: scale(1.05) rotate(1deg); }
+    }
+
+    /* HEADER BAR */
+    header {
+      height: 60px;
+      width: 100%;
+      background: rgba(13, 17, 23, 0.8);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 24px;
+      z-index: 10;
+      flex-shrink: 0;
+    }
+
+    .header-left { display: flex; align-items: center; gap: 12px; }
+    .header-left svg { width: 28px; height: 28px; color: var(--blue); }
+    .header-left h1 { font-size: 20px; font-weight: 800; letter-spacing: -0.5px; }
+    
+    .header-center { color: var(--muted); font-size: 14px; font-weight: 500; }
+    
+    .header-right { display: flex; align-items: center; gap: 16px; }
+    .status-badge { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; padding: 6px 12px; background: var(--bg-raised); border-radius: 99px; border: 1px solid var(--border); }
+    .status-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+    .status-dot.active { background: var(--green); animation: statusPulse 1.5s infinite; }
+    .status-dot.listening { background: var(--red); animation: statusPulse 0.8s infinite; }
+    .status-dot.speaking { background: var(--blue); animation: statusPulse 1s infinite; }
+    
+    .lang-badge { font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 600; color: var(--cyan); }
+
+    @keyframes statusPulse {
+      0%, 100% { opacity: 1; box-shadow: 0 0 8px currentColor; }
+      50% { opacity: 0.3; box-shadow: none; }
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--green), #059669);
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 14px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s;
+    }
+    .btn-primary:hover { filter: brightness(1.1); transform: translateY(-1px); }
+
+    /* MAIN 3-COLUMN LAYOUT */
+    .main-layout {
+      display: flex;
+      flex-grow: 1;
+      min-height: calc(100vh - 92px);
+      padding: 20px;
+      gap: 20px;
+      z-index: 1;
+    }
+
+    /* Panel animations */
+    @keyframes slideInLeft { from { opacity:0; transform:translateX(-30px); } to { opacity:1; transform:translateX(0); } }
+    @keyframes slideInRight { from { opacity:0; transform:translateX(30px); } to { opacity:1; transform:translateX(0); } }
+    @keyframes slideInUp { from { opacity:0; transform:translateY(20px); } to { opacity:1; transform:translateY(0); } }
+
+    .left-panel { width: 260px; flex-shrink: 0; display: flex; flex-direction: column; gap: 20px; animation: slideInLeft 0.5s cubic-bezier(0.16,1,0.3,1) both; }
+    .right-panel { width: 360px; flex-shrink: 0; display: flex; flex-direction: column; gap: 20px; animation: slideInRight 0.5s cubic-bezier(0.16,1,0.3,1) 0.1s both; }
+    .center-panel { flex-grow: 1; display: flex; flex-direction: column; gap: 20px; overflow-y: auto; padding-right: 10px; animation: slideInUp 0.5s cubic-bezier(0.16,1,0.3,1) 0.2s both; }
+    .center-panel::-webkit-scrollbar { width: 6px; }
+    .center-panel::-webkit-scrollbar-thumb { background: var(--bg-raised); border-radius: 3px; }
+
+    /* CARDS */
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      overflow: hidden;
+    }
+    .card-title { font-size: 12px; font-weight: 700; color: var(--muted); letter-spacing: 1px; text-transform: uppercase; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; }
+
+    /* LEFT PANEL COMPONENTS */
+    .lang-btn {
+      width: 100%; padding: 14px 16px; margin-bottom: 10px;
+      border-radius: 99px;
+      border: 1px solid var(--border);
+      background: var(--bg-raised);
+      color: var(--muted);
+      cursor: pointer;
+      font-size: 15px; font-weight: 600;
+      transition: all 0.2s ease;
+      text-align: center;
+      display: flex; justify-content: center; gap: 8px;
+    }
+    .lang-btn.active {
+      background: linear-gradient(135deg, var(--blue), var(--cyan));
+      border-color: transparent;
+      color: white;
+      box-shadow: 0 4px 20px rgba(59,130,246,0.35);
+    }
+
+    .progress-bar-bg { width: 100%; height: 6px; background: var(--bg-raised); border-radius: 3px; margin-bottom: 16px; overflow: hidden; }
+    .progress-bar-fill {
+      height: 100%; width: 0%;
+      background: linear-gradient(90deg, var(--blue), var(--cyan));
+      transition: width 0.6s cubic-bezier(0.16,1,0.3,1);
+      box-shadow: 0 0 12px rgba(59,130,246,0.4);
+    }
+    .checklist { display: flex; flex-direction: column; gap: 8px; font-size: 13px; color: var(--muted); }
+    .check-item { display: flex; align-items: center; gap: 8px; transition: all 0.3s; }
+    .check-item.active { color: var(--blue); font-weight: 600; transform: translateX(4px); }
+    .check-item.done { color: var(--text); }
+    .check-icon { width: 16px; height: 16px; border-radius: 50%; border: 1px solid var(--muted); display: flex; align-items: center; justify-content: center; font-size: 10px; }
+    .check-item.done .check-icon { background: var(--green); border-color: var(--green); color: white; animation: popCheck 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+    .check-item.active .check-icon { border-color: var(--blue); }
+
+    @keyframes popCheck { 0% { transform: scale(0); } 80% { transform: scale(1.2); } 100% { transform: scale(1); } }
+
+    .btn-action {
+      width: 100%; padding: 16px;
+      background: linear-gradient(135deg, var(--blue), var(--purple));
+      color: white; border: none; border-radius: 12px;
+      font-size: 16px; font-weight: 600; cursor: pointer;
+      box-shadow: 0 8px 25px rgba(59,130,246,0.3);
+      transition: all 0.3s;
+    }
+    .btn-action:hover { filter: brightness(1.1); transform: translateY(-2px); }
+    .btn-action.active { background: linear-gradient(135deg, var(--red), #b91c1c); box-shadow: 0 8px 25px rgba(239,68,68,0.3); animation: pulseGlow 2s infinite; }
+    @keyframes pulseGlow { 0%, 100% { box-shadow: 0 0 15px rgba(239,68,68,0.4); } 50% { box-shadow: 0 0 30px rgba(239,68,68,0.8); } }
+
+    /* CENTER PANEL COMPONENTS */
+    .video-container { position: relative; width: 100%; height: 450px; background: #000; border-radius: 12px; overflow: hidden; margin-bottom: 16px; border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; }
+    video { width: 100%; height: 100%; object-fit: contain; transform: scaleX(-1); }
+    .video-overlay { position: absolute; top: 12px; right: 12px; display: flex; gap: 8px; flex-direction: column; align-items: flex-end; }
+    .face-badge { background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 600; border: 1px solid rgba(255,255,255,0.1); }
+    
+    .form-section { margin-bottom: 24px; }
+    .form-section h3 { font-size: 14px; color: var(--cyan); margin-bottom: 12px; border-bottom: 1px solid var(--border); padding-bottom: 8px; }
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .form-group { display: flex; flex-direction: column; gap: 6px; }
+    .form-group.full { grid-column: 1 / -1; }
+    .form-label { font-size: 12px; color: var(--muted); font-weight: 500; transition: color 0.3s; }
+    .form-input { 
+      background: var(--bg-raised); border: 1px solid var(--border); color: var(--text);
+      padding: 12px 14px; border-radius: 8px; font-size: 14px; outline: none; transition: all 0.3s;
+    }
+    
+    /* Form input dynamic states */
+    input.field-filling {
+      border-color: var(--blue) !important;
+      box-shadow: 0 0 0 2px rgba(59,130,246,0.25), 0 0 20px rgba(59,130,246,0.15) !important;
+    }
+    input.field-filled {
+      border-color: var(--green) !important;
+      box-shadow: 0 0 0 2px rgba(16,185,129,0.3), 0 0 25px rgba(16,185,129,0.2) !important;
+      animation: fieldFlash 0.3s ease;
+    }
+    input.field-active {
+      border-color: var(--blue) !important;
+      box-shadow: 0 0 0 2px rgba(59,130,246,0.2), 0 0 15px rgba(59,130,246,0.1) !important;
+    }
+    input.field-done { border-left: 3px solid var(--green) !important; }
+    .form-group.active .form-label { color: var(--blue); }
+
+    @keyframes fieldFlash { 0% { background: rgba(16,185,129,0.1); } 100% { background: transparent; } }
+
+    /* RIGHT PANEL COMPONENTS */
+    .chat-area { flex-grow: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 16px; padding-right: 8px; margin-bottom: 16px; }
+    .chat-area::-webkit-scrollbar { width: 4px; }
+    .chat-area::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+    
+    .chat-bubble-ai { display: flex; gap: 10px; align-items: flex-start; animation: bubbleIn 0.3s cubic-bezier(0.16,1,0.3,1) both; }
+    .chat-bubble-user { display: flex; gap: 10px; align-items: flex-start; flex-direction: row-reverse; animation: bubbleIn 0.3s cubic-bezier(0.16,1,0.3,1) both; }
+    @keyframes bubbleIn { from { opacity: 0; transform: translateY(12px) scale(0.95); } to { opacity: 1; transform: translateY(0) scale(1); } }
+    
+    .bubble-avatar { width: 28px; height: 28px; border-radius: 50%; background: var(--bg-raised); display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 14px; }
+    .chat-bubble-ai .bubble-text {
+      background: var(--bg-raised); border: 1px solid var(--border); border-left: 3px solid var(--blue);
+      padding: 10px 14px; border-radius: 0 12px 12px 12px; max-width: 85%; font-size: 13.5px; line-height: 1.5; color: var(--text);
+    }
+    .chat-bubble-user .bubble-text {
+      background: linear-gradient(135deg, var(--blue), var(--cyan));
+      padding: 10px 14px; border-radius: 12px 0 12px 12px; max-width: 85%; font-size: 13.5px; line-height: 1.5; color: white;
+    }
+
+    .waveform-container { height: 40px; display: flex; align-items: flex-end; justify-content: center; gap: 4px; margin-bottom: 20px; }
+    .wave-bar { width: 4px; min-height: 4px; border-radius: 2px; background: linear-gradient(to top, var(--blue), var(--cyan)); transition: height 0.05s ease; }
+
+    .bottom-controls { display: flex; flex-direction: column; align-items: center; gap: 16px; background: var(--bg-card); border-top: 1px solid var(--border); padding-top: 16px; }
+    .mic-btn {
+      width: 64px; height: 64px; border-radius: 50%; border: none; cursor: pointer;
+      display: flex; align-items: center; justify-content: center; font-size: 24px;
+      transition: all 0.3s ease; position: relative; background: var(--bg-raised); color: white;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    }
+    .mic-btn.idle { background: var(--bg-raised); }
+    .mic-btn.listening { background: var(--red); animation: micPulse 1s ease-in-out infinite; }
+    .mic-btn.speaking { background: var(--blue); animation: micBreath 2s ease-in-out infinite; pointer-events: none; }
+
+    @keyframes micPulse {
+      0%   { box-shadow: 0 0 0 0 rgba(239,68,68,0.7); }
+      50%  { box-shadow: 0 0 0 16px rgba(239,68,68,0), 0 0 0 8px rgba(239,68,68,0.3); }
+      100% { box-shadow: 0 0 0 0 rgba(239,68,68,0); }
+    }
+    @keyframes micBreath {
+      0%, 100% { box-shadow: 0 0 15px rgba(59,130,246,0.4); transform: scale(1); }
+      50%      { box-shadow: 0 0 30px rgba(59,130,246,0.7); transform: scale(1.05); }
+    }
+
+    .control-row { display: flex; gap: 12px; width: 100%; }
+    .btn-secondary { flex: 1; padding: 10px; background: var(--faint); border: 1px solid var(--border); color: var(--muted); border-radius: 8px; cursor: pointer; font-size: 13px; transition: all 0.2s; }
+    .btn-secondary:hover { background: var(--bg-raised); color: var(--text); }
+
+    .interim-transcript {
+      position: absolute; bottom: 180px; left: 50%; transform: translateX(-50%);
+      background: rgba(0,0,0,0.8); color: white; padding: 8px 16px; border-radius: 20px;
+      font-size: 13px; backdrop-filter: blur(8px); border: 1px solid rgba(59,130,246,0.3);
+      max-width: 90%; text-align: center; display: none; z-index: 20;
+    }
+
+    /* FOOTER */
+    footer {
+      height: 32px; background: #000; display: flex; align-items: center; justify-content: space-between;
+      padding: 0 24px; font-size: 11px; color: var(--muted); font-family: 'JetBrains Mono', monospace; z-index: 10;
+    }
+    .footer-green { color: var(--green); }
+
+    /* CONFETTI */
+    @keyframes confettiFall {
+      0%   { transform: translateY(-20px) rotate(0deg); opacity: 1; }
+      100% { transform: translateY(105vh) rotate(720deg); opacity: 0; }
+    }
+
+    .result-card {
+      background: linear-gradient(135deg, rgba(16,185,129,0.1), rgba(6,182,212,0.1));
+      border: 1px solid var(--green);
+      border-radius: 12px;
+      padding: 20px;
+      margin-top: 20px;
+      display: none;
+      text-align: center;
+      animation: slideInUp 0.5s ease;
+    }
+    .result-card h2 { color: var(--green); margin-bottom: 10px; }
+    .result-card p { color: var(--text); font-size: 14px; margin-bottom: 5px; }
+    .result-card .offer-box { background: rgba(0,0,0,0.3); padding: 15px; border-radius: 8px; margin-top: 15px; border: 1px dashed var(--cyan); }
+
+  </style>
+</head>
+<body>
+
+  <!-- HEADER -->
+  <header>
+    <div class="header-left">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 8px;">
+        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+        <path d="M12 8v4"></path>
+        <path d="M12 16h.01"></path>
+      </svg>
+      <h1>CredAI</h1>
+      <a href="credai-voice-kyc.html" style="color:var(--muted); text-decoration:none; margin-left:20px; font-size:14px; font-weight:600; transition:color 0.2s;">Home</a>
+      <a href="dashboard.html" style="color:var(--muted); text-decoration:none; margin-left:15px; font-size:14px; font-weight:600; transition:color 0.2s;">Dashboard</a>
+    </div>
+    <div class="header-center">AI Voice eKYC Loan Assistant</div>
+    <div class="header-right">
+      <div class="status-badge">
+        <span class="status-dot" id="header-status-dot"></span>
+        <span id="header-status-text">Ready</span>
+      </div>
+      <div class="status-badge lang-badge" id="header-lang">EN</div>
+      <button class="btn-primary" id="btn-header-start">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+        Start
+      </button>
+    </div>
+  </header>
+
+  <!-- MAIN LAYOUT -->
+  <div class="main-layout">
+    
+    <!-- LEFT PANEL -->
+    <aside class="left-panel">
+      <!-- Language Card -->
+      <div class="card">
+        <div class="card-title">LANGUAGE / ಭಾಷೆ / भाषा</div>
+        <button class="lang-btn active" id="lang-en" onclick="setLanguage('en')">🇬🇧 English</button>
+        <button class="lang-btn" id="lang-hi" onclick="setLanguage('hi')">🇮🇳 हिंदी</button>
+        <button class="lang-btn" id="lang-kn" onclick="setLanguage('kn')">🇮🇳 ಕನ್ನಡ</button>
+      </div>
+
+      <!-- Progress Card -->
+      <div class="card" style="flex-grow: 1;">
+        <div class="card-title"><span>PROGRESS</span> <span id="progress-text" style="color:var(--cyan)">0%</span></div>
+        <div class="progress-bar-bg"><div class="progress-bar-fill" id="progress-bar"></div></div>
+        
+        <div class="checklist" id="checklist">
+          <!-- Populated by JS -->
+        </div>
+      </div>
+
+      <button class="btn-action" id="btn-main-action">🎤 Start AI Interview</button>
+    </aside>
+
+    <!-- CENTER PANEL -->
+    <main class="center-panel">
+      <!-- Identity Card -->
+      <div class="card">
+        <div class="card-title"><span>📷 Identity Verification</span></div>
+        <div class="video-container">
+          <video id="webcam" autoplay playsinline muted></video>
+          <div class="video-overlay">
+            <div class="face-badge" id="badge-face">Face: Searching...</div>
+            <div class="face-badge" id="badge-age" style="display:none">Age: --</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Loan Form Card -->
+      <div class="card">
+        <div class="card-title" style="margin-bottom: 5px;">📋 Loan Application</div>
+        <p style="font-size:12px; color:var(--muted); margin-bottom: 20px;">Form fills automatically as you speak</p>
+        
+        <div class="form-section">
+          <h3>Personal Information</h3>
+          <div class="form-grid">
+            <div class="form-group" id="group-fullName"><label class="form-label">Full Name</label><input type="text" id="fullName" class="form-input" placeholder="e.g. Rahul Sharma" readonly></div>
+            <div class="form-group" id="group-dob"><label class="form-label">Date of Birth</label><input type="text" id="dob" class="form-input" placeholder="DD/MM/YYYY" readonly></div>
+            <div class="form-group" id="group-gender"><label class="form-label">Gender</label><input type="text" id="gender" class="form-input" placeholder="Male / Female" readonly></div>
+            <div class="form-group" id="group-maritalStatus"><label class="form-label">Marital Status</label><input type="text" id="maritalStatus" class="form-input" placeholder="Single / Married" readonly></div>
+            <div class="form-group full" id="group-motherName"><label class="form-label">Mother's Name</label><input type="text" id="motherName" class="form-input" placeholder="Mother's full name" readonly></div>
+          </div>
+        </div>
+
+        <div class="form-section">
+          <h3>Contact Details</h3>
+          <div class="form-grid">
+            <div class="form-group" id="group-mobile"><label class="form-label">Mobile Number</label><input type="text" id="mobile" class="form-input" placeholder="10-digit number" readonly></div>
+            <div class="form-group" id="group-pincode"><label class="form-label">PIN Code</label><input type="text" id="pincode" class="form-input" placeholder="6 digits" readonly></div>
+            <div class="form-group" id="group-city"><label class="form-label">City</label><input type="text" id="city" class="form-input" placeholder="e.g. Bengaluru" readonly></div>
+            <div class="form-group" id="group-state"><label class="form-label">State</label><input type="text" id="state" class="form-input" placeholder="e.g. Karnataka" readonly></div>
+          </div>
+        </div>
+
+        <div class="form-section">
+          <h3>Employment & Income</h3>
+          <div class="form-grid">
+            <div class="form-group full" id="group-occupation"><label class="form-label">Occupation</label><input type="text" id="occupation" class="form-input" placeholder="e.g. Salaried, Business, Farmer" readonly></div>
+            <div class="form-group full" id="group-monthlyIncome"><label class="form-label">Monthly Income (₹)</label><input type="text" id="monthlyIncome" class="form-input" placeholder="₹0" readonly></div>
+          </div>
+        </div>
+
+        <div class="form-section">
+          <h3>Loan Requirements</h3>
+          <div class="form-grid">
+            <div class="form-group" id="group-loanAmount"><label class="form-label">Loan Amount Required (₹)</label><input type="text" id="loanAmount" class="form-input" placeholder="₹0" readonly></div>
+            <div class="form-group" id="group-tenure"><label class="form-label">Preferred Tenure</label><input type="text" id="tenure" class="form-input" placeholder="e.g. 36 months" readonly></div>
+            <div class="form-group full" id="group-loanPurpose"><label class="form-label">Loan Purpose</label><input type="text" id="loanPurpose" class="form-input" placeholder="e.g. Home repair, Education" readonly></div>
+            <div class="form-group full" id="group-existingLoans"><label class="form-label">Existing Loans?</label><input type="text" id="existingLoans" class="form-input" placeholder="Yes / No" readonly></div>
+          </div>
+        </div>
+
+        <!-- Result Card (shown after API call) -->
+        <div id="result-card" class="result-card">
+          <h2>🎉 Application Submitted!</h2>
+          <p id="res-decision">Processing your application...</p>
+          <div class="offer-box" id="res-offer" style="display:none;">
+            <p style="color:var(--cyan); font-weight:bold; font-size:18px;">Approved Offer: <span id="offer-amt"></span></p>
+            <p>EMI: <span id="offer-emi"></span> | Interest: <span id="offer-rate"></span>%</p>
+            <p style="font-size:11px; color:var(--muted); margin-top:8px;">AI Risk Score: <span id="offer-risk"></span></p>
+          </div>
+          <button class="btn-primary" onclick="window.print()" style="margin-top: 15px; width: 100%; justify-content: center; background: linear-gradient(135deg, var(--cyan), var(--blue));">📄 Download as PDF</button>
+        </div>
+
+      </div>
+    </main>
+
+    <!-- RIGHT PANEL -->
+    <aside class="right-panel">
+      <div class="card" style="flex-grow: 1; display: flex; flex-direction: column;">
+        <div class="card-title">
+          <span>CredAI Assistant 🤖</span>
+          <span id="right-panel-status" style="color:var(--blue); font-size:10px; font-weight:500;">Idle</span>
+        </div>
+        
+        <div class="chat-area" id="chat-container">
+          <!-- Chats go here -->
+          <div class="chat-bubble-ai">
+            <div class="bubble-avatar">🤖</div>
+            <div class="bubble-text">Click Start to begin your AI-guided loan application! No typing required.</div>
+          </div>
+        </div>
+
+        <div class="interim-transcript" id="interim-text"></div>
+
+        <div class="waveform-container" id="waveform">
+          <!-- 20 bars -->
+        </div>
+
+        <div class="bottom-controls">
+          <p id="mic-label" style="font-size:12px; color:var(--muted); margin-bottom:-5px;">Tap to speak</p>
+          <button class="mic-btn idle" id="btn-mic">🎙️</button>
+          
+          <div class="control-row">
+            <button class="btn-secondary" id="btn-repeat">⟳ Repeat</button>
+            <button class="btn-secondary" id="btn-skip">⏭ Skip</button>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+  </div>
+
+  <!-- FOOTER -->
+  <footer>
+    <span class="footer-green">🌐 Browser UI ⚡ + FastAPI ML Backend 🤖</span>
+    <span>Speech API: <span id="speech-status">Checking...</span></span>
+    <span id="clock">--:--:--</span>
+  </footer>
+
+  <script>
+    // ═══ STATE ═══
+    const state = {
+      language: 'en',
+      speechLang: 'en-IN',  
+      currentStep: -1,
+      formData: {},
+      isListening: false,
+      isSpeaking: false,
+      interviewStarted: false,
+      audioContext: null,
+      analyser: null,
+      micStream: null,
+      recognition: null,
+      synthesis: window.speechSynthesis,
+      retryCount: 0,
+      detectedAge: 30 // Default fallback
+    };
+
+    const ttsAudio = new Audio();
+
+    // ═══ QUESTIONS ARRAY (15 items) ═══
+    const questions = [
+      { field: 'fullName', label: 'Full Name', en: "What is your full name? Please say your first name and last name.", hi: "आपका पूरा नाम क्या है? कृपया अपना पहला और अंतिम नाम बताएं।", kn: "ನಿಮ್ಮ ಪೂರ್ಣ ಹೆಸರು ಏನು? ದಯವಿಟ್ಟು ನಿಮ್ಮ ಮೊದಲ ಮತ್ತು ಕೊನೆಯ ಹೆಸರು ಹೇಳಿ।" },
+      { field: 'dob', label: 'Date of Birth', en: "What is your date of birth? Say the day, month, and year.", hi: "आपकी जन्म तिथि क्या है? दिन, महीना और साल बताएं।", kn: "ನಿಮ್ಮ ಹುಟ್ಟಿದ ದಿನಾಂಕ ಏನು? ದಿನ, ತಿಂಗಳು ಮತ್ತು ವರ್ಷ ಹೇಳಿ।" },
+      { field: 'gender', label: 'Gender', en: "Are you male, female, or other?", hi: "आप पुरुष हैं, महिला हैं, या अन्य?", kn: "ನೀವು ಪುರುಷ, ಮಹಿಳೆ, ಅಥವಾ ಇತರ?" },
+      { field: 'maritalStatus', label: 'Marital Status', en: "What is your marital status? Say single, married, divorced, or widowed.", hi: "आपकी वैवाहिक स्थिति क्या है? अविवाहित, विवाहित, तलाकशुदा, या विधवा।", kn: "ನಿಮ್ಮ ವೈವಾಹಿಕ ಸ್ಥಿತಿ ಏನು? ಅವಿವಾಹಿತ, ವಿವಾಹಿತ, ವಿಚ್ಛೇದಿತ, ಅಥವಾ ವಿಧವೆ ಹೇಳಿ।" },
+      { field: 'motherName', label: "Mother's Name", en: "What is your mother's name?", hi: "आपकी माता का नाम क्या है?", kn: "ನಿಮ್ಮ ತಾಯಿಯ ಹೆಸರು ಏನು?" },
+      { field: 'mobile', label: 'Mobile Number', en: "What is your 10-digit mobile phone number?", hi: "आपका 10 अंकों का मोबाइल नंबर क्या है?", kn: "ನಿಮ್ಮ 10 ಅಂಕಿಯ ಮೊಬೈಲ್ ಸಂಖ್ಯೆ ಏನು?" },
+      { field: 'pincode', label: 'PIN Code', en: "What is your area PIN code? Say each digit clearly.", hi: "आपका एरिया पिन कोड क्या है? हर अंक साफ बोलें।", kn: "ನಿಮ್ಮ ಪ್ರದೇಶದ ಪಿನ್ ಕೋಡ್ ಏನು? ಪ್ರತಿ ಸಂಖ್ಯೆ ಸ್ಪಷ್ಟವಾಗಿ ಹೇಳಿ।" },
+      { field: 'city', label: 'City', en: "Which city do you currently live in?", hi: "आप अभी किस शहर में रहते हैं?", kn: "ನೀವು ಈಗ ಯಾವ ನಗರದಲ್ಲಿ ವಾಸಿಸುತ್ತೀರಿ?" },
+      { field: 'state', label: 'State', en: "Which state do you live in?", hi: "आप किस राज्य में रहते हैं?", kn: "ನೀವು ಯಾವ ರಾಜ್ಯದಲ್ಲಿ ವಾಸಿಸುತ್ತೀರಿ?" },
+      { field: 'occupation', label: 'Occupation', en: "What is your occupation? For example — government employee, private job, farmer, business owner.", hi: "आपका व्यवसाय क्या है? जैसे सरकारी नौकरी, प्राइवेट जॉब, किसान, व्यापारी।", kn: "ನಿಮ್ಮ ವೃತ್ತಿ ಏನು? ಉದಾಹರಣೆಗೆ — ಸರ್ಕಾರಿ ಉದ್ಯೋಗ, ಖಾಸಗಿ ಕೆಲಸ, ರೈತ, ವ್ಯಾಪಾರಿ।" },
+      { field: 'monthlyIncome', label: 'Monthly Income', en: "What is your approximate monthly income in rupees? You can say like fifteen thousand or two lakhs.", hi: "आपकी मासिक आय लगभग कितनी है? जैसे पंद्रह हजार या दो लाख।", kn: "ನಿಮ್ಮ ತಿಂಗಳ ಆದಾಯ ಎಷ್ಟು ರೂಪಾಯಿ? ಹದಿನೈದು ಸಾವಿರ ಅಥವಾ ಎರಡು ಲಕ್ಷ ಎಂದು ಹೇಳಬಹುದು।" },
+      { field: 'loanAmount', label: 'Loan Amount', en: "How much loan amount do you need? Say the amount in rupees.", hi: "आपको कितने रुपए का लोन चाहिए?", kn: "ನಿಮಗೆ ಎಷ್ಟು ರೂಪಾಯಿ ಸಾಲ ಬೇಕು?" },
+      { field: 'tenure', label: 'Tenure', en: "How many months would you like to repay this loan? Common options are 12, 24, 36, or 60 months.", hi: "आप कितने महीनों में लोन चुकाना चाहते हैं? जैसे 12, 24, 36, या 60 महीने।", kn: "ನೀವು ಎಷ್ಟು ತಿಂಗಳಲ್ಲಿ ಸಾಲ ತೀರಿಸಲು ಬಯಸುತ್ತೀರಿ? 12, 24, 36, ಅಥವಾ 60 ತಿಂಗಳು ಸಾಮಾನ್ಯ ಆಯ್ಕೆಗಳು।" },
+      { field: 'loanPurpose', label: 'Loan Purpose', en: "What is the purpose of this loan? For example — home repair, medical, or education.", hi: "यह लोन किस उद्देश्य के लिए है? जैसे घर की मरम्मत, मेडिकल, या बच्चों की पढ़ाई।", kn: "ಈ ಸಾಲ ಯಾವ ಉದ್ದೇಶಕ್ಕಾಗಿ? ಉದಾಹರಣೆಗೆ — ಮನೆ ದುರಸ್ತಿ, ವೈದ್ಯಕೀಯ, ಅಥವಾ ಮಕ್ಕಳ ವಿದ್ಯಾಭ್ಯಾಸ।" },
+      { field: 'existingLoans', label: 'Existing Loans', en: "Do you currently have any other loans running? Say yes or no.", hi: "क्या आपका अभी कोई और लोन चल रहा है? हां या नहीं बताएं।", kn: "ನಿಮಗೆ ಈಗ ಬೇರೆ ಯಾವುದಾದರೂ ಸಾಲ ಇದೆಯೇ? ಹೌದು ಅಥವಾ ಇಲ್ಲ ಹೇಳಿ।" }
+    ];
+
+    // Build Waveform & Checklist
+    const waveContainer = document.getElementById('waveform');
+    for(let i=0; i<20; i++) { const b = document.createElement('div'); b.className='wave-bar'; waveContainer.appendChild(b); }
+    
+    const checklist = document.getElementById('checklist');
+    questions.forEach((q, i) => {
+      const item = document.createElement('div');
+      item.className = 'check-item';
+      item.id = `check-${q.field}`;
+      item.innerHTML = `<div class="check-icon" id="icon-${q.field}"></div><span>${i+1}. ${q.label}</span>`;
+      checklist.appendChild(item);
+    });
+
+    // ═══ UTILITIES ═══
+    function addChatMessage(sender, text) {
+      const c = document.getElementById('chat-container');
+      const div = document.createElement('div');
+      div.className = sender === 'ai' ? 'chat-bubble-ai' : 'chat-bubble-user';
+      if(sender==='ai') div.innerHTML = `<div class="bubble-avatar">🤖</div><div class="bubble-text">${text}</div>`;
+      else div.innerHTML = `<div class="bubble-text">${text}</div>`;
+      c.appendChild(div);
+      c.scrollTop = c.scrollHeight;
+    }
+
+    function updateStatusUI(status, labelText) {
+      const dot = document.getElementById('header-status-dot');
+      const text = document.getElementById('header-status-text');
+      const mic = document.getElementById('btn-mic');
+      const micLab = document.getElementById('mic-label');
+      const right = document.getElementById('right-panel-status');
+      
+      dot.className = 'status-dot'; mic.className = 'mic-btn';
+      if(status === 'idle') { dot.classList.add('active'); text.innerText = 'Ready'; mic.classList.add('idle'); mic.innerText='🎙️'; micLab.innerText='Tap to speak'; right.innerText='Ready'; }
+      if(status === 'speaking') { dot.classList.add('speaking'); text.innerText = 'AI Speaking'; mic.classList.add('speaking'); mic.innerText='🔊'; micLab.innerText='AI is speaking...'; right.innerText='Speaking in ' + state.language.toUpperCase(); }
+      if(status === 'listening') { dot.classList.add('listening'); text.innerText = 'Listening'; mic.classList.add('listening'); mic.innerText='🎙️'; micLab.innerText='Listening... Speak now!'; right.innerText='Listening...'; }
+    }
+
+    // ═══ SPEECH SYNTHESIS ═══
+    function speak(text, lang, onComplete) {
+      state.synthesis.cancel();
+      
+      setTimeout(() => {
+        const u = new SpeechSynthesisUtterance(text);
+        u.lang = lang || state.speechLang;
+        u.rate = 0.9;
+        
+        let targetCode = (lang || 'en').split('-')[0].toLowerCase();
+        
+        // FORCE Cloud Audio for Hindi to bypass broken Windows local voices completely
+        if (targetCode === 'hi') {
+          console.warn("Forcing Cloud Audio for Hindi to guarantee playback via backend proxy");
+          state.isSpeaking = true; updateStatusUI('speaking');
+          
+          ttsAudio.src = `http://127.0.0.1:8000/api/tts?lang=hi&text=${encodeURIComponent(text)}`;
+          
+          ttsAudio.onended = () => { state.isSpeaking = false; if(onComplete) onComplete(); };
+          ttsAudio.onerror = () => { 
+            console.error("Cloud TTS failed"); 
+            setTimeout(() => { state.isSpeaking = false; if(onComplete) onComplete(); }, 3000); 
+          };
+          ttsAudio.play().catch(e => { 
+            console.error("Audio Play Err:", e); 
+            // Fallback timeout to prevent infinite rapid skip loop!
+            setTimeout(() => { state.isSpeaking = false; if(onComplete) onComplete(); }, 3000); 
+          });
+          return;
+        }
+        
+        const voices = state.synthesis.getVoices();
+        let ind = voices.find(v => v.lang.toLowerCase() === u.lang.toLowerCase());
+        if (!ind) ind = voices.find(v => v.lang.toLowerCase().startsWith(targetCode));
+        if (!ind && targetCode === 'kn') ind = voices.find(v => v.name.toLowerCase().includes('kannada') || v.name.includes('ಕನ್ನಡ'));
+        if (!ind && targetCode === 'en') ind = voices.find(v => v.lang.includes('IN') || v.lang.includes('en'));
+        
+        if(ind) {
+          u.voice = ind;
+          console.log("Using Web Speech API voice:", ind.name, ind.lang);
+          u.onstart = () => { state.isSpeaking = true; updateStatusUI('speaking'); };
+          u.onend = () => { state.isSpeaking = false; if(onComplete) onComplete(); };
+          u.onerror = (e) => { console.error('TTS Err:', e); state.isSpeaking = false; if(onComplete) onComplete(); };
+          
+          const rT = setInterval(() => { if(!state.synthesis.speaking) clearInterval(rT); else state.synthesis.resume(); }, 10000);
+          state.synthesis.speak(u);
+        } else {
+          console.warn("Local TTS Voice missing for " + targetCode + " - Falling back to Cloud Audio via backend");
+          state.isSpeaking = true; updateStatusUI('speaking');
+          
+          ttsAudio.src = `http://127.0.0.1:8000/api/tts?lang=${targetCode}&text=${encodeURIComponent(text)}`;
+          
+          ttsAudio.onended = () => { state.isSpeaking = false; if(onComplete) onComplete(); };
+          ttsAudio.onerror = () => { 
+            console.error("Cloud TTS failed"); 
+            setTimeout(() => { state.isSpeaking = false; if(onComplete) onComplete(); }, 3000); 
+          };
+          ttsAudio.play().catch(e => { 
+            console.error("Audio Play Err:", e); 
+            // Fallback timeout to prevent infinite rapid skip loop!
+            setTimeout(() => { state.isSpeaking = false; if(onComplete) onComplete(); }, 3000); 
+          });
+        }
+      }, 50);
+    }
+
+    // ═══ SPEECH RECOGNITION ═══
+    function listen(expectedLang, onResult) {
+      const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (!SpeechRec) return;
+      if (state.recognition) try{ state.recognition.stop(); }catch(e){}
+      
+      state.recognition = new SpeechRec();
+      state.recognition.lang = expectedLang || state.speechLang;
+      state.recognition.continuous = false;
+      state.recognition.interimResults = true;
+      
+      let finalT = '', interimT = '', silT;
+      const overlay = document.getElementById('interim-text');
+      
+      state.recognition.onstart = () => { 
+        state.isListening = true; updateStatusUI('listening'); 
+        overlay.style.display = 'block'; overlay.innerText = '...';
+      };
+      
+      state.recognition.onresult = (e) => {
+        interimT = '';
+        for (let i = e.resultIndex; i < e.results.length; i++) {
+          if (e.results[i].isFinal) finalT += e.results[i][0].transcript;
+          else interimT += e.results[i][0].transcript;
+        }
+        overlay.innerText = finalT || interimT;
+        
+        clearTimeout(silT);
+        silT = setTimeout(() => { if(finalT || interimT) state.recognition.stop(); }, 4000);
+      };
+      
+      state.recognition.onend = () => {
+        state.isListening = false; clearTimeout(silT); overlay.style.display = 'none'; updateStatusUI('idle');
+        const res = (finalT || interimT).trim();
+        if(!res) {
+          state.retryCount++;
+          if(state.retryCount < 2) {
+            const msgs = { en:"I didn't hear you.", hi:"मुझे सुनाई नहीं दिया।", kn:"ನನಗೆ ಕೇಳಿಸಲಿಲ್ಲ।" };
+            speak(msgs[state.language], state.speechLang, () => listen(expectedLang, onResult));
+          } else { state.retryCount=0; nextQuestion(); }
+        } else { state.retryCount=0; onResult(res); }
+      };
+      try { state.recognition.start(); } catch(e) {}
+    }
+
+    // ═══ LOGIC ═══
+    function detectLang(t) {
+      t = t.toLowerCase();
+      if(t.includes('kannada') || t.includes('ಕನ್ನಡ')) return 'kn';
+      if(t.includes('hindi') || t.includes('हिंदी')) return 'hi';
+      if(t.includes('english')) return 'en';
+      return null;
+    }
+    const slMap = { en: 'en-IN', hi: 'hi-IN', kn: 'kn-IN' };
+
+    function extractAnswer(f, t) {
+      const v = t.trim().toLowerCase();
+      if(f==='gender') return (/male|man|purush|ಪುರುಷ|पुरुष/i.test(v)) ? 'Male' : 'Female';
+      if(f==='mobile' || f==='pincode') return v.replace(/\D/g, '');
+      if(f==='existingLoans') return (/yes|haan|ಹೌದು|हां/i.test(v)) ? 'Yes' : 'No';
+      if(f==='maritalStatus') {
+        if(/single|unmarried|ಅವಿವಾಹಿತ/i.test(v)) return 'Single';
+        if(/married|विवाहित|ವಿವಾಹಿತ/i.test(v)) return 'Married';
+        return v;
+      }
+      if(f==='monthlyIncome' || f==='loanAmount') {
+        let amt = parseInt(v.replace(/\D/g, '')) || 0;
+        if(/lakh|lac|ಲಕ್ಷ|लाख/.test(v)) amt = (amt||1)*100000;
+        else if(/thousand|hazar|ಸಾವಿರ|हजार/.test(v)) amt = (amt||1)*1000;
+        return amt>0 ? amt.toString() : v; // Return raw string number for API
+      }
+      if(f==='tenure') { const n=v.match(/\d+/); return n ? n[0] : '36'; }
+      return t.trim(); // Raw
+    }
+
+    function toggleStart() {
+      const btn = document.getElementById('btn-main-action');
+      const hBtn = document.getElementById('btn-header-start');
+      
+      // Initialize empty audio to unlock context safely
+      ttsAudio.src = 'data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA';
+      ttsAudio.play().catch(e=>{});
+
+      if(!state.interviewStarted) {
+        state.interviewStarted = true;
+        btn.innerText = '⏹ Stop Interview'; btn.classList.add('active');
+        hBtn.innerHTML = '⏹ Stop'; hBtn.style.background = 'var(--red)';
+        startInterviewFlow();
+      } else {
+        location.reload(); // Simple reset
+      }
+    }
+
+    function setLanguage(dl) {
+      if(state.interviewStarted) return; // Prevent changing during interview
+      state.language = dl; state.speechLang = slMap[dl];
+      document.querySelectorAll('.lang-btn').forEach(b=>b.classList.remove('active'));
+      document.getElementById('lang-'+dl).classList.add('active');
+      document.getElementById('header-lang').innerText = dl.toUpperCase();
+    }
+
+    function startInterviewFlow() {
+      const msgs = { 
+        en: "Welcome to CredAI. Let's begin your loan application. I will ask you a few questions.", 
+        hi: "CredAI में आपका स्वागत है। चलिए आपका लोन आवेदन शुरू करते हैं।", 
+        kn: "CredAI ಗೆ ಸುಸ್ವಾಗತ. ನಿಮ್ಮ ಸಾಲದ ಅರ್ಜಿಯನ್ನು ಪ್ರಾರಂಭಿಸೋಣ." 
+      };
+      
+      const q = msgs[state.language];
+      addChatMessage('ai', q);
+      speak(q, state.speechLang, () => {
+        state.currentStep = 0; 
+        askQuestion(0);
+      });
+    }
+
+    function askQuestion(idx) {
+      if(idx >= questions.length) { finishInterview(); return; }
+      state.currentStep = idx;
+      const q = questions[idx];
+      
+      // Highlight form & check
+      document.querySelectorAll('.form-group').forEach(g=>g.classList.remove('active'));
+      document.querySelectorAll('.form-input').forEach(i=>i.classList.remove('field-active'));
+      const grp = document.getElementById('group-'+q.field);
+      const inp = document.getElementById(q.field);
+      if(grp) grp.classList.add('active');
+      if(inp) inp.classList.add('field-active');
+      
+      document.querySelectorAll('.check-item').forEach(c=>c.classList.remove('active'));
+      document.getElementById('check-'+q.field).classList.add('active');
+      
+      addChatMessage('ai', q[state.language]);
+      speak(q[state.language], state.speechLang, () => {
+        listen(state.speechLang, (t) => {
+          addChatMessage('user', t);
+          const ext = extractAnswer(q.field, t);
+          state.formData[q.field] = ext;
+          typeField(q.field, (q.field === 'monthlyIncome' || q.field === 'loanAmount') ? '₹'+ext : ext);
+          updateProg(idx+1);
+          setTimeout(() => askQuestion(idx+1), 1200);
+        });
+      });
+    }
+
+    function typeField(id, val) {
+      const f = document.getElementById(id);
+      if(!f) return;
+      f.value = ''; f.classList.remove('field-active'); f.classList.add('field-filling');
+      let i=0; const v=String(val);
+      function t() {
+        if(i<v.length) { f.value+=v[i]; i++; setTimeout(t, 35); }
+        else { 
+          f.classList.remove('field-filling'); f.classList.add('field-filled');
+          document.getElementById('check-'+id).classList.add('done');
+          setTimeout(()=>{ f.classList.remove('field-filled'); f.classList.add('field-done'); }, 600);
+        }
+      }
+      t();
+    }
+
+    function nextQuestion() { askQuestion(state.currentStep+1); }
+    function repeatQuestion() { if(state.currentStep>=0) askQuestion(state.currentStep); }
+    function updateProg(c) { const p = Math.round((c/questions.length)*100); document.getElementById('progress-bar').style.width=p+'%'; document.getElementById('progress-text').innerText=p+'%'; }
+
+    // ═══ REAL BACKEND INTEGRATION ═══
+    async function finishInterview() {
+      addChatMessage('ai', "Thank you! I am now analyzing your application with our AI models...");
+      speak("Thank you! I am now compiling your application...", state.speechLang);
+      
+      const payload = {
+        transcript: Object.values(state.formData).join('. '),
+        risk_payload: {
+          income: parseFloat(state.formData.monthlyIncome) || 35000,
+          credit_amount: parseFloat(state.formData.loanAmount) || 150000,
+          annuity: (parseFloat(state.formData.loanAmount) || 150000) * 0.03,
+          age_years: state.detectedAge || 30,
+          employment_years: 5.0,
+          gender: (state.formData.gender || 'Male').charAt(0).toUpperCase(),
+          education: "Secondary / secondary special",
+          income_type: state.formData.occupation || "Working",
+          family_status: state.formData.maritalStatus || "Married",
+          own_car: "N",
+          own_realty: "Y",
+          children: 0,
+          ext_score_1: 0.5,
+          ext_score_2: 0.6,
+          ext_score_3: 0.5
+        },
+        geo_location: { latitude: 12.9716, longitude: 77.5946, city: "Bengaluru" }, // Mocked for UI flow
+        consent_status: true,
+        liveness_passed: true,
+        confidence_score: 0.92
+      };
+
+      try {
+        const res = await fetch('/api/session/complete', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        
+        // Save to localStorage so result.html can read it
+        localStorage.setItem('credai_session_data', JSON.stringify({
+            ...payload,
+            result: data,
+            timestamp: new Date().toISOString()
+        }));
+
+        // Redirect to the unified result page
+        window.location.href = 'result.html';
+        
+      } catch (err) {
+        console.error("Backend error:", err);
+        addChatMessage('ai', "Connection to ML Backend failed. Please ensure the backend is running on port 8000.");
+      }
+    }
+
+    // ═══ AUDIO WAVEFORM ═══
+    function initAudio() {
+      navigator.mediaDevices.getUserMedia({ audio: true }).then(s => {
+        state.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        state.analyser = state.audioContext.createAnalyser(); state.analyser.fftSize = 64;
+        state.audioContext.createMediaStreamSource(s).connect(state.analyser);
+        animWave();
+      }).catch(e => console.warn('Mic err', e));
+    }
+
+    function animWave() {
+      const bars = document.querySelectorAll('.wave-bar');
+      const d = new Uint8Array(state.analyser?.frequencyBinCount || 32);
+      let t = 0;
+      function loop() {
+        if(state.isListening && state.analyser) {
+          state.analyser.getByteFrequencyData(d);
+          bars.forEach((b, i) => b.style.height = Math.max(4, (d[i]/255)*40) + 'px');
+        } else {
+          t+=0.08;
+          bars.forEach((b, i) => b.style.height = Math.max(4, 4+Math.sin(t+i*0.4)*6) + 'px');
+        }
+        requestAnimationFrame(loop);
+      }
+      loop();
+    }
+
+    // ═══ CAMERA & FACE-API ═══
+    async function initCamera() {
+      try {
+        const str = await navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480 } });
+        const vid = document.getElementById('webcam'); vid.srcObject = str;
+        
+        await faceapi.nets.tinyFaceDetector.loadFromUri('https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model');
+        await faceapi.nets.ageGenderNet.loadFromUri('https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model');
+        
+        setInterval(async () => {
+          const det = await faceapi.detectAllFaces(vid, new faceapi.TinyFaceDetectorOptions()).withAgeAndGender();
+          const bf = document.getElementById('badge-face'), ba = document.getElementById('badge-age');
+          if(det.length > 0) {
+            bf.innerText = 'Face: Detected ✅'; bf.style.color = 'var(--green)'; bf.style.borderColor = 'var(--green)';
+            ba.style.display = 'block'; ba.innerText = `Age Est: ${Math.round(det[0].age)} | ${det[0].gender}`;
+            state.detectedAge = Math.round(det[0].age); // save for backend
+          } else {
+            bf.innerText = 'Face: Searching...'; bf.style.color = 'var(--text)'; bf.style.borderColor = 'rgba(255,255,255,0.1)';
+          }
+        }, 1500);
+      } catch(e) { console.warn('Cam err', e); document.getElementById('badge-face').innerText = 'Camera Error'; }
+    }
+
+    // Confetti
+    function triggerConfetti() {
+      const cols = ['#3b82f6','#06b6d4','#10b981','#f59e0b','#8b5cf6'];
+      for (let i=0; i<60; i++) {
+        setTimeout(() => {
+          const p = document.createElement('div');
+          p.style.cssText = `position:fixed;width:8px;height:8px;background:${cols[Math.floor(Math.random()*cols.length)]};left:${Math.random()*100}vw;top:-20px;animation:confettiFall ${Math.random()*2+2}s linear forwards;z-index:9999;`;
+          document.body.appendChild(p); setTimeout(()=>p.remove(),4000);
+        }, i*40);
+      }
+    }
+
+    // Init
+    window.addEventListener('load', () => {
+      // Pre-load voices
+      if (speechSynthesis.onvoiceschanged !== undefined) {
+        speechSynthesis.onvoiceschanged = () => { console.log('Voices loaded'); };
+      }
+      
+      document.getElementById('speech-status').innerText = (window.SpeechRecognition || window.webkitSpeechRecognition) ? 'Active ✅' : 'Not Supported ❌';
+      setInterval(() => document.getElementById('clock').innerText = new Date().toLocaleTimeString(), 1000);
+      document.getElementById('btn-main-action').addEventListener('click', toggleStart);
+      document.getElementById('btn-header-start').addEventListener('click', toggleStart);
+      document.getElementById('btn-repeat').addEventListener('click', repeatQuestion);
+      document.getElementById('btn-skip').addEventListener('click', nextQuestion);
+      document.getElementById('btn-mic').addEventListener('click', () => { if(state.interviewStarted && !state.isSpeaking && !state.isListening) repeatQuestion(); });
+      
+      initAudio();
+      initCamera();
+    });
+
+  </script>
+</body>
+</html>

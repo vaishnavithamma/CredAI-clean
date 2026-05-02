@@ -23,6 +23,9 @@
           </svg>
           <span>Cred<span class="text-accent">AI</span></span>
       </div>
+      <div style="position: absolute; left: 50%; transform: translateX(-50%); font-weight: 500; font-size: 1rem; color: rgba(255,255,255,0.7); letter-spacing: 0.5px;">
+          AI Voice eKYC Loan Assistant
+      </div>
       <div class="nav-links">
           <a href="index.html">Home</a>
           <a href="dashboard.html">Dashboard</a>
@@ -48,19 +51,29 @@
         </div>
       </div>
       
-      <!-- PDF Upload -->
+      <!-- PDF and OCR Upload -->
       <div class="pdf-upload-section">
-        <h3 style="color:rgba(255,255,255,0.7); font-size:0.85rem; text-transform:uppercase; letter-spacing:0.08em;">Loan Form PDF</h3>
-        <div id="pdf-drop-zone" class="pdf-dropzone" 
-             style="border:2px dashed rgba(99,179,237,0.3); border-radius:12px; padding:20px; text-align:center; cursor:pointer; transition:all 0.3s ease;"
-             onclick="document.getElementById('pdf-file-input').click()"
-             ondragover="event.preventDefault()" 
-             ondrop="handlePdfDrop(event)">
-          <div class="pdf-drop-icon" style="font-size:2rem; margin-bottom:8px;">📄</div>
-          <p style="font-size:0.8rem; color:rgba(255,255,255,0.5);">Drop PDF here or click to upload</p>
-          <p style="font-size:0.7rem; color:rgba(255,255,255,0.3); margin-top:4px;">Optional — will use default form if none</p>
+        <h3 style="color:rgba(255,255,255,0.7); font-size:0.85rem; text-transform:uppercase; letter-spacing:0.08em;">Documents</h3>
+        <div style="display:flex; flex-direction:column; gap:8px; margin-top:8px;">
+          <!-- PDF Dropzone -->
+          <div id="pdf-drop-zone" class="pdf-dropzone" 
+               style="border:2px dashed rgba(99,179,237,0.3); border-radius:12px; padding:15px; text-align:center; cursor:pointer; transition:all 0.3s ease;"
+               onclick="document.getElementById('pdf-file-input').click()"
+               ondragover="event.preventDefault()" 
+               ondrop="handlePdfDrop(event)">
+            <div class="pdf-drop-icon" style="font-size:1.5rem; margin-bottom:4px;">📄</div>
+            <p style="font-size:0.8rem; color:rgba(255,255,255,0.5);">Upload Form (PDF)</p>
+          </div>
+          <input type="file" id="pdf-file-input" accept=".pdf" style="display:none" onchange="handlePdfUpload(event)">
+          
+          <!-- PAN Card OCR Upload -->
+          <div class="pan-upload" style="border:1px solid rgba(255,255,255,0.1); border-radius:12px; padding:15px; text-align:center; cursor:pointer; background:rgba(255,255,255,0.02);"
+               onclick="document.getElementById('pan-file-input').click()">
+            <div style="font-size:1.5rem; margin-bottom:4px;">📷</div>
+            <p style="font-size:0.8rem; color:rgba(255,255,255,0.5);">Scan PAN Card</p>
+          </div>
+          <input type="file" id="pan-file-input" accept="image/*" style="display:none" onchange="handlePanUpload(event)">
         </div>
-        <input type="file" id="pdf-file-input" accept=".pdf" style="display:none" onchange="handlePdfUpload(event)">
         <div id="pdf-status" style="margin-top:8px; font-size:0.8rem; color:rgba(99,179,237,0.8); display:none;"></div>
       </div>
       
@@ -95,10 +108,18 @@
           <div style="display:flex; gap:6px; flex-wrap:wrap;" id="face-badges">
             <span class="face-badge inactive" id="badge-face">⚪ No Face</span>
             <span class="face-badge inactive" id="badge-age">📅 Age: --</span>
-            <span class="face-badge inactive" id="badge-emotion">😐 --</span>
             <span class="face-badge inactive" id="badge-liveness">🔵 Checking</span>
+            <span class="face-badge inactive" id="badge-geo" style="display:none;">📍 Locating...</span>
           </div>
         </div>
+        
+        <!-- Blink Challenge Overlay -->
+        <div id="blink-challenge" style="display:none; position:absolute; top:40px; left:16px; right:16px; background:rgba(0,0,0,0.7); backdrop-filter:blur(5px); z-index:20; border-radius:12px; padding:20px; text-align:center;">
+            <div style="font-size:3rem; margin-bottom:10px; animation:blink 2s infinite;">👁️</div>
+            <h4 style="color:white; margin-bottom:5px;">Liveness Check</h4>
+            <p style="color:var(--accent-teal); font-size:0.9rem;">Please blink twice slowly...</p>
+        </div>
+
         <div style="position:relative; border-radius:12px; overflow:hidden; background:#0a0f1a;">
           <video id="webcam-video" autoplay playsinline muted 
                  style="width:100%; max-height:280px; object-fit:cover; border-radius:12px; display:block;"></video>
@@ -203,6 +224,7 @@
     </aside>
   </main>
 
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
   <script src="js/api.js"></script>
   <script src="js/speech.js"></script>
   <script src="js/video.js"></script>
@@ -219,7 +241,6 @@
         
         const bFace = document.getElementById('badge-face');
         const bAge = document.getElementById('badge-age');
-        const bEmotion = document.getElementById('badge-emotion');
         const bLive = document.getElementById('badge-liveness');
         
         if(data.face_detected) {
@@ -228,9 +249,6 @@
             
             bAge.className = 'face-badge active';
             bAge.textContent = `📅 Age: ${data.estimated_age}`;
-            
-            bEmotion.className = 'face-badge active';
-            bEmotion.textContent = `😐 ${data.dominant_emotion}`;
             
             bLive.className = data.liveness_status === 'active' ? 'face-badge active' : 'face-badge warning';
             bLive.textContent = `🔵 ${data.liveness_status}`;
