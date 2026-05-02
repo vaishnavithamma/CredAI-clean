@@ -107,5 +107,9 @@ def detect_fraud(data: dict) -> dict:
         "fraud_level": fraud_level,
         "block": block,
         "alerts": alerts,
-        "explanation": explanation
+        "explanation": explanation,
+        "face_match_score": face_match_score,
+        "voice_confidence": voice_confidence,
+        "consent_captured": consent_captured,
+        "ip_city": ip_city
     }

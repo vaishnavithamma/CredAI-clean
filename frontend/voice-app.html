@@ -693,7 +693,7 @@
 
     function extractAnswer(f, t) {
       const v = t.trim().toLowerCase();
-      if(f==='gender') return (/male|man|purush|ಪುರುಷ|पुरुष/i.test(v)) ? 'Male' : 'Female';
+      if(f==='gender') return (/female|woman|mahila|ಮಹಿಳೆ|महिला/i.test(v)) ? 'Female' : (/male|man|purush|ಪುರುಷ|पुरुष/i.test(v)) ? 'Male' : 'Other';
       if(f==='mobile' || f==='pincode') return v.replace(/\D/g, '');
       if(f==='existingLoans') return (/yes|haan|ಹೌದು|हां/i.test(v)) ? 'Yes' : 'No';
       if(f==='maritalStatus') {

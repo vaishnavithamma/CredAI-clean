@@ -299,13 +299,13 @@
 
             // Gauges
             const rScore = data.risk_assessment.risk_score;
-            document.getElementById('risk-text').innerText = rScore;
+            document.getElementById('risk-text').textContent = rScore;
             const rGauge = document.getElementById('risk-gauge');
             rGauge.setAttribute('stroke-dasharray', `${rScore}, 100`);
             rGauge.className.baseVal = "circle " + (rScore < 20 ? "green" : rScore < 60 ? "orange" : "red");
 
             const fScore = data.fraud_assessment.fraud_score;
-            document.getElementById('fraud-text').innerText = fScore;
+            document.getElementById('fraud-text').textContent = fScore;
             const fGauge = document.getElementById('fraud-gauge');
             fGauge.setAttribute('stroke-dasharray', `${fScore}, 100`);
             fGauge.className.baseVal = "circle " + (fScore < 20 ? "green" : fScore < 60 ? "orange" : "red");

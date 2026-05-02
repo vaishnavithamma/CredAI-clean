@@ -119,20 +119,60 @@ async def complete_session(req: CompleteSessionRequest):
     }
     fraud_result = detect_fraud(fraud_data)
 
-    # Calculate 3-tier loan offers
-    base_offer = risk_result.get("loan_offer", {})
-    base_amount = base_offer.get("amount", 0)
-    base_rate = base_offer.get("interest_rate", 12.0)
+    # Base risk score and rate
+    base_risk_score = risk_result.get("risk_score", 100)
+    base_rate = risk_result.get("loan_offer", {}).get("interest_rate", 15.0)
     
+    # Financials from User
+    monthly_income = float(answers.get("monthly_income") or 35000)
+    requested_amount = float(answers.get("loan_amount") or 100000)
+    requested_tenure = max(float(answers.get("loan_tenure_months") or 24), 12.0)
+    
+    # Standard FOIR (Fixed Obligation to Income Ratio) calculation
+    # A user can afford a max EMI of 50% of their monthly income
+    max_affordable_emi = monthly_income * 0.50
+    
+    # Calculate required EMI for the requested amount
+    r_monthly = (base_rate / 100.0) / 12.0
+    if r_monthly > 0:
+        required_emi = requested_amount * r_monthly * ((1 + r_monthly)**requested_tenure) / (((1 + r_monthly)**requested_tenure) - 1)
+    else:
+        required_emi = requested_amount / requested_tenure
+
+    # Calculate Max Affordable Loan Amount
+    if r_monthly > 0:
+        max_affordable_loan = (max_affordable_emi * (((1 + r_monthly)**requested_tenure) - 1)) / (r_monthly * ((1 + r_monthly)**requested_tenure))
+    else:
+        max_affordable_loan = max_affordable_emi * requested_tenure
+        
+    max_affordable_loan = round(max_affordable_loan, 2)
+
+    # Decision Engine
     tiered_offers = []
-    if base_amount > 0:
+    
+    if fraud_result["block"] or base_risk_score >= 60:
+        final_decision = "REJECTED"
+        # No offers
+    elif base_risk_score >= 40:
+        final_decision = "MANUAL REVIEW"
+        # No immediate offers
+    else:
+        # User is in acceptable risk band (<40)
+        if required_emi <= max_affordable_emi:
+            final_decision = "APPROVED"
+            approved_amount = requested_amount
+        else:
+            final_decision = "PARTIALLY APPROVED"
+            approved_amount = max_affordable_loan
+            
+        # Build 3-tier realistic offers based on the approved amount limit
         tiered_offers = [
-            {"tier": "🏆 Best Offer", "amount": min(base_amount * 1.5, 500000), "interest_rate": round(max(base_rate - 1.0, 9.0), 1), "tenure_months": 36},
-            {"tier": "⚡ Standard", "amount": base_amount, "interest_rate": base_rate, "tenure_months": 24},
-            {"tier": "🛡️ Safe Option", "amount": max(base_amount * 0.5, 50000), "interest_rate": round(base_rate + 1.5, 1), "tenure_months": 12}
+            {"tier": "🏆 Best Offer", "amount": approved_amount, "interest_rate": round(max(base_rate - 1.0, 9.0), 1), "tenure_months": 36},
+            {"tier": "⚡ Standard", "amount": approved_amount, "interest_rate": base_rate, "tenure_months": 24},
+            {"tier": "🛡️ Safe Option", "amount": min(approved_amount, max_affordable_loan * 0.7), "interest_rate": round(base_rate + 1.5, 1), "tenure_months": 12}
         ]
 
-    # Calculate EMI for each tier
+    # Calculate EMI mathematically for each tier so UI shows real numbers
     for offer in tiered_offers:
         r = (offer["interest_rate"] / 100) / 12
         m = offer["tenure_months"]
@@ -141,8 +181,6 @@ async def complete_session(req: CompleteSessionRequest):
             offer["emi"] = round(emi, 2)
         else:
             offer["emi"] = 0
-
-    final_decision = "REJECTED" if fraud_result["block"] else "APPROVED" if risk_result.get("risk_score", 100) < 40 else "MANUAL REVIEW"
 
     log_application(
         session_id=req.session_id,
