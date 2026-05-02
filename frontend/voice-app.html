@@ -807,28 +807,32 @@
       speak("Thank you! I am now compiling your application...", state.speechLang);
       
       const payload = {
-        transcript: Object.values(state.formData).join('. '),
-        risk_payload: {
-          income: parseFloat(state.formData.monthlyIncome) || 35000,
-          credit_amount: parseFloat(state.formData.loanAmount) || 150000,
-          annuity: (parseFloat(state.formData.loanAmount) || 150000) * 0.03,
-          age_years: state.detectedAge || 30,
-          employment_years: 5.0,
-          gender: (state.formData.gender || 'Male').charAt(0).toUpperCase(),
-          education: "Secondary / secondary special",
-          income_type: state.formData.occupation || "Working",
-          family_status: state.formData.maritalStatus || "Married",
-          own_car: "N",
-          own_realty: "Y",
-          children: 0,
-          ext_score_1: 0.5,
-          ext_score_2: 0.6,
-          ext_score_3: 0.5
+        session_id: 'SESS-' + Date.now(),
+        answers: {
+          fullname: state.formData.fullName || "Unknown",
+          dob: state.formData.dob || "01/01/1990",
+          gender: state.formData.gender || "Male",
+          monthly_income: state.formData.monthlyIncome || "35000",
+          loan_amount: state.formData.loanAmount || "150000",
+          loan_tenure_months: state.formData.tenure || "36",
+          city: state.formData.city || "Bengaluru",
+          work_experience_years: 5,
+          employment_type: state.formData.occupation || "Working",
+          marital_status: state.formData.maritalStatus || "Single",
+          own_vehicle: "N",
+          own_property: "Y",
+          dependents: 0
         },
-        geo_location: { latitude: 12.9716, longitude: 77.5946, city: "Bengaluru" }, // Mocked for UI flow
-        consent_status: true,
+        face_match_score: 0.95,
         liveness_passed: true,
-        confidence_score: 0.92
+        session_duration_seconds: 120,
+        geo_city: "Bengaluru",
+        voice_confidence: 0.95,
+        consent_captured: true,
+        full_transcript: Object.values(state.formData).join('. '),
+        metadata: {
+            estimated_age: state.detectedAge || 30
+        }
       };
 
       try {
@@ -839,12 +843,9 @@
         });
         const data = await res.json();
         
-        // Save to localStorage so result.html can read it
-        localStorage.setItem('credai_session_data', JSON.stringify({
-            ...payload,
-            result: data,
-            timestamp: new Date().toISOString()
-        }));
+        // Save to sessionStorage so result.html can correctly read it
+        sessionStorage.setItem("applicationResult", JSON.stringify(data));
+        sessionStorage.setItem("applicantData", JSON.stringify(payload.answers));
 
         // Redirect to the unified result page
         window.location.href = 'result.html';

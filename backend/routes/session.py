@@ -142,11 +142,21 @@ async def complete_session(req: CompleteSessionRequest):
         else:
             offer["emi"] = 0
 
+    final_decision = "REJECTED" if fraud_result["block"] else "APPROVED" if risk_result.get("risk_score", 100) < 40 else "MANUAL REVIEW"
+
+    log_application(
+        session_id=req.session_id,
+        applicant_data=answers,
+        risk_result=risk_result,
+        fraud_result=fraud_result,
+        final_decision=final_decision
+    )
+
     return {
         "success": True,
         "session_id": req.session_id,
         "timestamp": datetime.now().isoformat(),
-        "final_decision": "REJECTED" if fraud_result["block"] else "APPROVED" if risk_result.get("risk_score", 100) < 40 else "MANUAL REVIEW",
+        "final_decision": final_decision,
         "risk_assessment": risk_result,
         "fraud_assessment": fraud_result,
         "llm_classification": llm_classification,

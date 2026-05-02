@@ -159,6 +159,7 @@
 
         <div class="flex justify-center gap-2" style="margin-top: 40px;">
             <button class="btn btn-primary" onclick="generateAuditPDF()">📥 Download Audit Report</button>
+            <button class="btn btn-secondary" onclick="exportApplicationData()">📄 Export Form Data</button>
             <a href="voice-app.html" class="btn btn-secondary">New Application</a>
             <a href="credai-voice-kyc.html" class="btn btn-secondary">Back to Home</a>
         </div>
@@ -364,28 +365,86 @@
             const doc = new jsPDF();
             const d = window.auditData;
             
+            let appData = {};
+            try {
+                const stored = sessionStorage.getItem("applicantData");
+                if (stored) appData = JSON.parse(stored);
+            } catch(e) {}
+            
             doc.setFontSize(22);
-            doc.text('CredAI — Loan Application Audit Report', 20, 20);
+            doc.text('CredAI — Comprehensive Application Report', 20, 20);
             
-            doc.setFontSize(12);
-            doc.text(`Session ID: ${d.session_id}`, 20, 40);
-            doc.text(`Timestamp: ${new Date(d.timestamp).toLocaleString()}`, 20, 50);
+            doc.setFontSize(10);
+            doc.text(`Session ID: ${d.session_id}`, 20, 30);
+            doc.text(`Timestamp: ${new Date(d.timestamp).toLocaleString()}`, 20, 36);
             
-            doc.text(`Face Match Score: ${Math.round(d.fraud_assessment.face_match_score*100)}%`, 20, 70);
-            doc.text(`Consent Captured: ${d.fraud_assessment.consent_captured ? 'YES' : 'NO'}`, 20, 80);
-            doc.text(`Geolocation Verified: ${d.fraud_assessment.ip_city || 'NO'}`, 20, 90);
-            doc.text(`Voice Confidence: ${Math.round(d.fraud_assessment.voice_confidence*100)}%`, 20, 100);
+            // Section 1: Personal Details
+            doc.setFontSize(14);
+            doc.text('1. Personal Information', 20, 50);
+            doc.setFontSize(11);
+            doc.text(`Full Name: ${appData.fullname || 'N/A'}`, 25, 60);
+            doc.text(`Date of Birth: ${appData.dob || 'N/A'}`, 25, 68);
+            doc.text(`Gender: ${appData.gender || 'N/A'}`, 25, 76);
+            doc.text(`Marital Status: ${appData.marital_status || 'N/A'}`, 105, 60);
+            doc.text(`Dependents: ${appData.dependents || '0'}`, 105, 68);
+            doc.text(`City: ${appData.city || 'N/A'}`, 105, 76);
+
+            // Section 2: Financial Details
+            doc.setFontSize(14);
+            doc.text('2. Financial Profile', 20, 92);
+            doc.setFontSize(11);
+            doc.text(`Employment Type: ${appData.employment_type || 'N/A'}`, 25, 102);
+            doc.text(`Monthly Income: INR ${appData.monthly_income || '0'}`, 25, 110);
+            doc.text(`Work Experience: ${appData.work_experience_years || '0'} Years`, 105, 102);
+            doc.text(`Owns Property: ${appData.own_property === 'Y' ? 'Yes' : 'No'}`, 105, 110);
+
+            // Section 3: Loan Request
+            doc.setFontSize(14);
+            doc.text('3. Loan Request Details', 20, 126);
+            doc.setFontSize(11);
+            doc.text(`Requested Amount: INR ${appData.loan_amount || '0'}`, 25, 136);
+            doc.text(`Preferred Tenure: ${appData.loan_tenure_months || '0'} Months`, 105, 136);
+
+            // Section 4: Risk & Fraud Assessment
+            doc.setFontSize(14);
+            doc.text('4. CredAI Risk & Fraud Assessment', 20, 152);
+            doc.setFontSize(11);
+            doc.text(`Risk Score: ${d.risk_assessment.risk_score}/100`, 25, 162);
+            doc.text(`Fraud Score: ${d.fraud_assessment.fraud_score}/100`, 105, 162);
             
-            doc.text(`Risk Score: ${d.risk_assessment.risk_score}/100`, 20, 120);
-            doc.text(`Fraud Score: ${d.fraud_assessment.fraud_score}/100`, 20, 130);
-            doc.text(`Final Decision: ${d.final_decision}`, 20, 140);
+            doc.text(`Face Match: ${Math.round(d.fraud_assessment.face_match_score*100)}%`, 25, 170);
+            doc.text(`Voice Confidence: ${Math.round(d.fraud_assessment.voice_confidence*100)}%`, 105, 170);
+            doc.text(`Geolocation Verified: ${d.fraud_assessment.ip_city || 'NO'}`, 25, 178);
+            doc.text(`Consent Captured: ${d.fraud_assessment.consent_captured ? 'YES' : 'NO'}`, 105, 178);
+            
+            // Final Decision
+            doc.setFontSize(16);
+            doc.text(`Final Decision: ${d.final_decision}`, 20, 195);
             
             if(d.tiered_offers && d.tiered_offers.length > 0) {
-                doc.text(`Approved Amount: INR ${d.tiered_offers[1].amount}`, 20, 160);
-                doc.text(`Interest Rate: ${d.tiered_offers[1].interest_rate}%`, 20, 170);
+                doc.setFontSize(12);
+                doc.text(`Approved Amount: INR ${d.tiered_offers[1].amount}`, 20, 205);
+                doc.text(`Approved Interest Rate: ${d.tiered_offers[1].interest_rate}% p.a.`, 20, 213);
             }
             
-            doc.save(`credai-audit-${d.session_id}.pdf`);
+            doc.save(`credai-application-${d.session_id}.pdf`);
+        }
+
+        // 📄 Export Application Data (JSON format)
+        function exportApplicationData() {
+            const applicantData = sessionStorage.getItem("applicantData");
+            if (!applicantData) {
+                alert("No application data found to export!");
+                return;
+            }
+            
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(JSON.parse(applicantData), null, 2));
+            const downloadAnchorNode = document.createElement('a');
+            downloadAnchorNode.setAttribute("href", dataStr);
+            downloadAnchorNode.setAttribute("download", `credai-application-data.json`);
+            document.body.appendChild(downloadAnchorNode);
+            downloadAnchorNode.click();
+            downloadAnchorNode.remove();
         }
     </script>
 </body>
