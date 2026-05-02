@@ -50,7 +50,7 @@
             <div class="hero-visual fade-in" style="animation-delay: 0.3s; position: relative;">
                 <div class="glass-card flex-col items-center justify-center" style="height: 500px; width: 300px; border-radius: 40px; margin: 0 auto; position: relative; overflow: hidden; border: 8px solid #1a233a;">
                     <div style="position: absolute; top: 10px; width: 40%; height: 20px; background: #0a0f1e; border-radius: 10px; z-index: 10;"></div>
-                    <img src="https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=600" alt="Video Call" style="width: 100%; height: 100%; object-fit: cover; opacity: 0.8;">
+                    <video id="hero-webcam" autoplay playsinline muted style="width: 100%; height: 100%; object-fit: cover; opacity: 0.8; transform: scaleX(-1);"></video>
                     <div style="position: absolute; bottom: 20px; background: rgba(0,0,0,0.6); padding: 10px 20px; border-radius: 20px; backdrop-filter: blur(10px);">
                         <span style="color: var(--accent-teal);">🟢 Scanning Face... 99%</span>
                     </div>
@@ -147,5 +147,19 @@
 
     <script src="js/api.js"></script>
     <script src="js/app.js"></script>
+    <script>
+        // Start webcam for the hero section mockup
+        document.addEventListener('DOMContentLoaded', async () => {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                const video = document.getElementById('hero-webcam');
+                if (video) {
+                    video.srcObject = stream;
+                }
+            } catch (err) {
+                console.error("Camera access denied or unavailable for hero section:", err);
+            }
+        });
+    </script>
 </body>
 </html>
