@@ -72,7 +72,7 @@ This system automates the entire onboarding using AI in under 3 minutes. It repl
 - **NMIT Bengaluru**
 
 ## Team Members-contributed to this project
-- **GaneshT**
-- **Vaishnavi**
+- **Ganesh**
+- **T Vaishnavi**
 - **Ramya RS**
 - **Harshavaradan Reddy HM**
