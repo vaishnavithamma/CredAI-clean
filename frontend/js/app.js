@@ -99,3 +99,18 @@ document.addEventListener("DOMContentLoaded", () => {
     const statsSection = document.querySelector('.stats-section');
     if (statsSection) observer.observe(statsSection);
 });
+document.getElementById("downloadBtn").addEventListener("click", async () => {
+    const response = await fetch("http://localhost:8000/api/download-report", {
+        method: "GET"
+    });
+
+    const blob = await response.blob();
+    const url = window.URL.createObjectURL(blob);
+
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "loan_report.pdf";   // change to .json if needed
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+});

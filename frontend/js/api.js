@@ -76,19 +76,19 @@ async function submitApplication(allData, sessionId) {
         applicant_data: allData,
         pan_number: allData.pan_number || ""
     };
-    
+
     const result = await fetchAPI("/api/session/complete", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload)
     });
-    
+
     if (result.success) {
         sessionStorage.setItem("applicationResult", JSON.stringify(result));
         sessionStorage.setItem("applicantData", JSON.stringify(allData));
         window.location.href = "result.html";
     }
-    
+
     return result;
 }
 
@@ -96,7 +96,7 @@ async function submitApplication(allData, sessionId) {
 function initHealthCheck() {
     const dot = document.getElementById("api-status-dot");
     const text = document.getElementById("api-status-text");
-    
+
     async function check() {
         try {
             const res = await fetch(`${BASE_URL}/api/health`);
@@ -115,7 +115,7 @@ function initHealthCheck() {
             }
         }
     }
-    
+
     check();
     setInterval(check, 5000);
 }
@@ -130,4 +130,15 @@ document.addEventListener("DOMContentLoaded", () => {
         document.body.appendChild(div);
     }
     initHealthCheck();
+});
+document.getElementById("downloadBtn").addEventListener("click", async () => {
+    const response = await fetch("http://localhost:8000/api/download-report");
+
+    const blob = await response.blob();
+    const url = window.URL.createObjectURL(blob);
+
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "loan_report.pdf";
+    a.click();
 });

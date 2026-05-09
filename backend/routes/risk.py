@@ -2,7 +2,7 @@ from fastapi import APIRouter
 from pydantic import BaseModel
 from typing import Optional
 from backend.services.risk_service import predict_risk
-
+latest_result = {}
 router = APIRouter(prefix="/api/risk", tags=["Risk"])
 
 class RiskInput(BaseModel):
@@ -30,5 +30,11 @@ async def assess_risk(data: RiskInput):
     if "goods_price" not in data_dict:
         data_dict["goods_price"] = data_dict["credit_amount"]
         
+    global latest_result
+
     result = predict_risk(data_dict)
+
+    # store full result
+    latest_result = result
+
     return result
