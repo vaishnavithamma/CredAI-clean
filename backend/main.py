@@ -15,7 +15,7 @@ from deepface import DeepFace
 import numpy as np
 import urllib.request
 import urllib.parse
-from fastapi.responses import StreamingResponse
+from fastapi.responses import StreamingResponse, RedirectResponse
 
 
 @asynccontextmanager
@@ -75,6 +75,9 @@ async def health():
 
 # ✅ SERVE FRONTEND
 frontend_dir = os.path.join(BASE_DIR, "frontend")
+@app.get("/")
+async def redirect_to_kyc():
+    return RedirectResponse(url="/credai-voice-kyc.html")
 if os.path.exists(frontend_dir):
     app.mount("/", StaticFiles(directory=frontend_dir, html=True), name="frontend")
 
