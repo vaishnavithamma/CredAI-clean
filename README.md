@@ -70,3 +70,9 @@ This system automates the entire onboarding using AI in under 3 minutes. It repl
 - **CredAI Team**
 - **Vibethon 2026**
 - **NMIT Bengaluru**
+
+## Team Members-contributed to this project
+- **T Vaishnavi**
+- **Ramya RS**
+- **Ganesh**
+- **Harshavaradan Reddy HM**
