@@ -328,10 +328,18 @@
             }
 
             // Summary
-            document.getElementById('sum-age').innerText = data.fraud_assessment.estimated_age || appData.declared_age || '--';
+            let ageDisplay = (data.fraud_assessment && data.fraud_assessment.estimated_age) || appData.age_years || appData.estimated_age;
+            if (!ageDisplay && appData.dob) {
+                const parts = appData.dob.split('/');
+                if (parts.length === 3) {
+                    ageDisplay = Math.floor((Date.now() - new Date(parts[2], parts[1]-1, parts[0]).getTime()) / 31557600000);
+                }
+            }
+            document.getElementById('sum-age').innerText = ageDisplay || '--';
             document.getElementById('sum-gender').innerText = appData.gender || '--';
-            document.getElementById('sum-income').innerText = `₹${(appData.income || 0).toLocaleString()}`;
-            document.getElementById('sum-emp').innerText = appData.income_type || '--';
+            const finalIncome = Number(appData.income || appData.monthly_income || 0);
+            document.getElementById('sum-income').innerText = `₹${finalIncome.toLocaleString()}`;
+            document.getElementById('sum-emp').innerText = appData.income_type || appData.employment_type || (appData.employment_years ? `${appData.employment_years} Years` : '--');
 
             // Global PDF Data
             window.auditData = data;
@@ -360,9 +368,8 @@
         tenureSlider.addEventListener('input', updateEMI);
 
         // 📥 jsPDF Audit Report Generation
-        function generateAuditPDF() {
-            const { jsPDF } = window.jspdf;
-            const doc = new jsPDF();
+        // 📥 jsPDF Audit Report Generation (Upgraded to html2pdf)
+        async function generateAuditPDF() {
             const d = window.auditData;
             
             let appData = {};
@@ -371,80 +378,165 @@
                 if (stored) appData = JSON.parse(stored);
             } catch(e) {}
             
-            doc.setFontSize(22);
-            doc.text('CredAI — Comprehensive Application Report', 20, 20);
-            
-            doc.setFontSize(10);
-            doc.text(`Session ID: ${d.session_id}`, 20, 30);
-            doc.text(`Timestamp: ${new Date(d.timestamp).toLocaleString()}`, 20, 36);
-            
-            // Section 1: Personal Details
-            doc.setFontSize(14);
-            doc.text('1. Personal Information', 20, 50);
-            doc.setFontSize(11);
-            doc.text(`Full Name: ${appData.fullname || 'N/A'}`, 25, 60);
-            doc.text(`Date of Birth: ${appData.dob || 'N/A'}`, 25, 68);
-            doc.text(`Gender: ${appData.gender || 'N/A'}`, 25, 76);
-            doc.text(`Marital Status: ${appData.marital_status || 'N/A'}`, 105, 60);
-            doc.text(`Dependents: ${appData.dependents || '0'}`, 105, 68);
-            doc.text(`City: ${appData.city || 'N/A'}`, 105, 76);
-
-            // Section 2: Financial Details
-            doc.setFontSize(14);
-            doc.text('2. Financial Profile', 20, 92);
-            doc.setFontSize(11);
-            doc.text(`Employment Type: ${appData.employment_type || 'N/A'}`, 25, 102);
-            doc.text(`Monthly Income: INR ${appData.monthly_income || '0'}`, 25, 110);
-            doc.text(`Work Experience: ${appData.work_experience_years || '0'} Years`, 105, 102);
-            doc.text(`Owns Property: ${appData.own_property === 'Y' ? 'Yes' : 'No'}`, 105, 110);
-
-            // Section 3: Loan Request
-            doc.setFontSize(14);
-            doc.text('3. Loan Request Details', 20, 126);
-            doc.setFontSize(11);
-            doc.text(`Requested Amount: INR ${appData.loan_amount || '0'}`, 25, 136);
-            doc.text(`Preferred Tenure: ${appData.loan_tenure_months || '0'} Months`, 105, 136);
-
-            // Section 4: Risk & Fraud Assessment
-            doc.setFontSize(14);
-            doc.text('4. CredAI Risk & Fraud Assessment', 20, 152);
-            doc.setFontSize(11);
-            doc.text(`Risk Score: ${d.risk_assessment.risk_score}/100`, 25, 162);
-            doc.text(`Fraud Score: ${d.fraud_assessment.fraud_score}/100`, 105, 162);
-            
-            doc.text(`Face Match: ${Math.round(d.fraud_assessment.face_match_score*100)}%`, 25, 170);
-            doc.text(`Voice Confidence: ${Math.round(d.fraud_assessment.voice_confidence*100)}%`, 105, 170);
-            doc.text(`Geolocation Verified: ${d.fraud_assessment.ip_city || 'NO'}`, 25, 178);
-            doc.text(`Consent Captured: ${d.fraud_assessment.consent_captured ? 'YES' : 'NO'}`, 105, 178);
-            
-            // Final Decision
-            doc.setFontSize(16);
-            doc.text(`Final Decision: ${d.final_decision}`, 20, 195);
-            
+            let offersHtml = '';
             if(d.tiered_offers && d.tiered_offers.length > 0) {
-                doc.setFontSize(12);
-                doc.text(`Approved Amount: INR ${d.tiered_offers[1].amount}`, 20, 205);
-                doc.text(`Approved Interest Rate: ${d.tiered_offers[1].interest_rate}% p.a.`, 20, 213);
+                offersHtml = `
+                    <div style="margin-top: 20px;">
+                        <p style="margin: 5px 0;"><strong>Approved Amount:</strong> INR ${d.tiered_offers[1].amount}</p>
+                        <p style="margin: 5px 0;"><strong>Approved Interest Rate:</strong> ${d.tiered_offers[1].interest_rate}% p.a.</p>
+                    </div>
+                `;
+            }
+
+            const html = `
+                <div id="audit-pdf-container" style="padding: 40px; font-family: sans-serif; color: #000; background: #fff; width: 800px; line-height: 1.5;">
+                    <h1 style="font-size: 24px; color: #111827; margin-bottom: 5px;">CredAI — Comprehensive Application Report</h1>
+                    <p style="font-size: 12px; color: #6b7280; margin-top: 0; margin-bottom: 5px;">Session ID: ${d.session_id}</p>
+                    <p style="font-size: 12px; color: #6b7280; margin-top: 0; margin-bottom: 30px;">Timestamp: ${new Date(d.timestamp).toLocaleString()}</p>
+
+                    <h2 style="font-size: 18px; color: #3b82f6; border-bottom: 1px solid #e5e7eb; padding-bottom: 5px; margin-top: 20px; margin-bottom: 15px;">1. Personal Information</h2>
+                    <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
+                        <tr>
+                            <td style="width: 50%; padding: 5px 0;"><strong>Full Name:</strong> ${appData.fullname || 'N/A'}</td>
+                            <td style="width: 50%; padding: 5px 0;"><strong>Marital Status:</strong> ${appData.marital_status || 'N/A'}</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 5px 0;"><strong>Date of Birth:</strong> ${appData.dob || 'N/A'}</td>
+                            <td style="padding: 5px 0;"><strong>Dependents:</strong> ${appData.dependents || '0'}</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 5px 0;"><strong>Gender:</strong> ${appData.gender || 'N/A'}</td>
+                            <td style="padding: 5px 0;"><strong>City:</strong> ${appData.city || 'N/A'}</td>
+                        </tr>
+                    </table>
+
+                    <h2 style="font-size: 18px; color: #3b82f6; border-bottom: 1px solid #e5e7eb; padding-bottom: 5px; margin-top: 30px; margin-bottom: 15px;">2. Financial Profile</h2>
+                    <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
+                        <tr>
+                            <td style="width: 50%; padding: 5px 0;"><strong>Employment Type:</strong> ${appData.employment_type || 'N/A'}</td>
+                            <td style="width: 50%; padding: 5px 0;"><strong>Work Experience:</strong> ${appData.work_experience_years || '0'} Years</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 5px 0;"><strong>Monthly Income:</strong> INR ${appData.monthly_income || '0'}</td>
+                            <td style="padding: 5px 0;"><strong>Owns Property:</strong> ${appData.own_property === 'Y' ? 'Yes' : 'No'}</td>
+                        </tr>
+                    </table>
+
+                    <h2 style="font-size: 18px; color: #3b82f6; border-bottom: 1px solid #e5e7eb; padding-bottom: 5px; margin-top: 30px; margin-bottom: 15px;">3. Loan Request Details</h2>
+                    <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
+                        <tr>
+                            <td style="width: 50%; padding: 5px 0;"><strong>Requested Amount:</strong> INR ${appData.loan_amount || '0'}</td>
+                            <td style="width: 50%; padding: 5px 0;"><strong>Preferred Tenure:</strong> ${appData.loan_tenure_months || '0'} Months</td>
+                        </tr>
+                    </table>
+
+                    <h2 style="font-size: 18px; color: #3b82f6; border-bottom: 1px solid #e5e7eb; padding-bottom: 5px; margin-top: 30px; margin-bottom: 15px;">4. CredAI Risk & Fraud Assessment</h2>
+                    <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
+                        <tr>
+                            <td style="width: 50%; padding: 5px 0;"><strong>Risk Score:</strong> ${d.risk_assessment.risk_score}/100</td>
+                            <td style="width: 50%; padding: 5px 0;"><strong>Fraud Score:</strong> ${d.fraud_assessment.fraud_score}/100</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 5px 0;"><strong>Face Match:</strong> ${Math.round(d.fraud_assessment.face_match_score*100)}%</td>
+                            <td style="padding: 5px 0;"><strong>Voice Confidence:</strong> ${Math.round(d.fraud_assessment.voice_confidence*100)}%</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 5px 0;"><strong>Geolocation Verified:</strong> ${d.fraud_assessment.ip_city || 'NO'}</td>
+                            <td style="padding: 5px 0;"><strong>Consent Captured:</strong> ${d.fraud_assessment.consent_captured ? 'YES' : 'NO'}</td>
+                        </tr>
+                    </table>
+
+                    <div style="margin-top: 40px; padding: 20px; border: 2px solid ${d.final_decision === 'REJECTED' ? '#ef4444' : '#10b981'}; border-radius: 8px; background: ${d.final_decision === 'REJECTED' ? '#fef2f2' : '#ecfdf5'};">
+                        <h2 style="margin: 0 0 10px 0; font-size: 20px; color: ${d.final_decision === 'REJECTED' ? '#ef4444' : '#10b981'};">Final Decision: ${d.final_decision}</h2>
+                        ${offersHtml}
+                    </div>
+                </div>
+            `;
+
+            const wrapper = document.createElement('div');
+            wrapper.style.position = 'absolute';
+            wrapper.style.top = '0';
+            wrapper.style.left = '0';
+            wrapper.style.zIndex = '-9999';
+            wrapper.innerHTML = html;
+            document.body.appendChild(wrapper);
+
+            if (!window.html2canvas) {
+                const script = document.createElement('script');
+                script.src = "https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js";
+                document.head.appendChild(script);
+                await new Promise(r => script.onload = r);
             }
             
+            const canvas = await html2canvas(wrapper.firstElementChild, { scale: 2, useCORS: true });
+            document.body.removeChild(wrapper);
+
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF('p', 'mm', 'a4');
+            const imgData = canvas.toDataURL('image/jpeg', 0.98);
+            
+            const pdfWidth = doc.internal.pageSize.getWidth();
+            const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+            
+            doc.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
             doc.save(`credai-application-${d.session_id}.pdf`);
         }
 
-        // 📄 Export Application Data (JSON format)
-        function exportApplicationData() {
-            const applicantData = sessionStorage.getItem("applicantData");
-            if (!applicantData) {
+        // 📄 Export Application Data (PDF format)
+        async function exportApplicationData() {
+            const applicantDataStr = sessionStorage.getItem("applicantData");
+            if (!applicantDataStr) {
                 alert("No application data found to export!");
                 return;
             }
             
-            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(JSON.parse(applicantData), null, 2));
-            const downloadAnchorNode = document.createElement('a');
-            downloadAnchorNode.setAttribute("href", dataStr);
-            downloadAnchorNode.setAttribute("download", `credai-application-data.json`);
-            document.body.appendChild(downloadAnchorNode);
-            downloadAnchorNode.click();
-            downloadAnchorNode.remove();
+            const appData = JSON.parse(applicantDataStr);
+            
+            let html = `
+                <div id="pdf-export-container" style="padding: 40px; font-family: sans-serif; color: #000; background: #fff; width: 800px;">
+                    <h2 style="color: #3b82f6; border-bottom: 2px solid #e5e7eb; padding-bottom: 10px; margin-bottom: 20px;">CredAI — Applicant Form Data</h2>
+                    <table style="width: 100%; border-collapse: collapse; text-align: left;">
+            `;
+            
+            for (const [key, value] of Object.entries(appData)) {
+                const formattedKey = key.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+                html += `
+                    <tr>
+                        <td style="padding: 12px 10px; border-bottom: 1px solid #e5e7eb; font-weight: bold; width: 40%; color: #374151;">${formattedKey}</td>
+                        <td style="padding: 12px 10px; border-bottom: 1px solid #e5e7eb; color: #111827;">${value}</td>
+                    </tr>
+                `;
+            }
+            
+            html += `</table></div>`;
+            
+            const wrapper = document.createElement('div');
+            wrapper.style.position = 'absolute';
+            wrapper.style.top = '0';
+            wrapper.style.left = '0';
+            wrapper.style.zIndex = '-9999';
+            wrapper.innerHTML = html;
+            document.body.appendChild(wrapper);
+            
+            if (!window.html2canvas) {
+                const script = document.createElement('script');
+                script.src = "https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js";
+                document.head.appendChild(script);
+                await new Promise(r => script.onload = r);
+            }
+            
+            const canvas = await html2canvas(wrapper.firstElementChild, { scale: 2, useCORS: true });
+            document.body.removeChild(wrapper);
+
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF('p', 'mm', 'a4');
+            const imgData = canvas.toDataURL('image/jpeg', 0.98);
+            
+            const pdfWidth = doc.internal.pageSize.getWidth();
+            const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+            
+            doc.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
+            doc.save('applicant-form-data.pdf');
         }
     </script>
 </body>
